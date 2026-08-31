@@ -67,6 +67,15 @@ function direitoDaConta(vinculo: string | undefined): Direito {
  */
 const TETO_TITULO = 96;
 
+/**
+ * O resumo é a matéria-prima da Redação: a importação monta título, linha
+ * fina e corpo a partir dele. O Instagram aceita legendas de até 2.200
+ * caracteres; um teto menor entregava o texto com um toco no fim
+ * ("…credenciamento e alinha") e a Redação publicava menos do que a fonte
+ * disse. As telas daqui continuam cortando na exibição.
+ */
+const TETO_RESUMO = 2200;
+
 function tituloEResumo(caption: string | undefined): { titulo: string; resumo: string } {
   const limpa = (caption ?? "").replace(/\s+/g, " ").trim();
   if (!limpa) return { titulo: "Post sem legenda", resumo: "" };
@@ -80,7 +89,7 @@ function tituloEResumo(caption: string | undefined): { titulo: string; resumo: s
     if (ultimoEspaco > 40) titulo = titulo.slice(0, ultimoEspaco);
     titulo += "…";
   }
-  return { titulo: titulo || limpa.slice(0, TETO_TITULO), resumo: limpa.slice(0, 600) };
+  return { titulo: titulo || limpa.slice(0, TETO_TITULO), resumo: limpa.slice(0, TETO_RESUMO) };
 }
 
 /**
