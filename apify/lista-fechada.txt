@@ -1,0 +1,25 @@
+23 contas na lista fechada
+
+tempo_real @operacoesrio                @OperacoesRio        COR-Rio — Centro de Operações e Resiliência
+tempo_real @sistemaalertario            @sistemaalertario    Sistema Alerta Rio — meteorologia da Prefeitura
+tempo_real @defesacivilrio              @defesacivil_rio     Defesa Civil Municipal do Rio
+diario     @defesacivilrj               @DefesaCivilRJ       Defesa Civil do Estado do RJ (SEDEC-RJ)
+diario     @cbmerj                      @cbmerj_oficial      Corpo de Bombeiros Militar do RJ (CBMERJ)
+diario     @ineagovrj                   @inea_rj             INEA — Instituto Estadual do Ambiente
+3_dias     @saude_rio                   @saudeprefrio        Secretaria Municipal de Saúde do Rio
+3_dias     @saudegovrj                  @SaudeGovRJ          Secretaria de Estado de Saúde do RJ
+diario     @hemorio                     @HEMORIO             Hemorio — Rede Estadual de Hematologia
+3_dias     @fiocruz                     @fiocruz             Fiocruz — Fundação Oswaldo Cruz
+tempo_real @vozdascomunidades           @vozdacomunidade     Voz das Comunidades
+diario     @maredenoticias              @mare_noticias       Maré de Notícias
+diario     @falaroca                    @falaroca            Fala Roça
+diario     @agencialume                 —                    Agência Lume
+3_dias     @labjaca                     —                    LabJaca
+tempo_real @fogocruzadorj               @FogoCruzadoRJ       Fogo Cruzado RJ
+tempo_real @ott_rio                     @ott_rio             Onde Tem Tiroteio (OTT)
+diario     @metroriooficial             @MetroRio            MetrôRio
+diario     @supervia_trens              @SuperVia_trens      SuperVia Trens Urbanos
+diario     @ccrbarcas                   @CCRBarcas           CCR Barcas
+diario     @cruzvermelhabrasileirarj    —                    Cruz Vermelha Brasileira — Filial RJ
+3_dias     @cruzvermelhabrasileira      —                    Cruz Vermelha Brasileira — nacional
+10_dias    @ifrc                        —                    IFRC — Federação Internacional

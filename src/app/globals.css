@@ -1,0 +1,144 @@
+/* Linguagem visual dos protótipos: papel, tinta e o vermelho da Cruz. */
+:root {
+  --bg: #f3eee9;
+  --paper: #fff;
+  --ink: #1c1614;
+  --muted: #6d645e;
+  --line: #e4d8d0;
+  --red: #8f1230;
+  --red-escuro: #7a1028;
+  --verde: #145c3a;
+  --verde-bg: #e7f6ee;
+  --ambar: #8a4d00;
+  --ambar-bg: #fff5e7;
+  --azul: #1e4e78;
+  --azul-bg: #eef6ff;
+  --rosa-bg: #fde8ee;
+  --sombra: 0 10px 30px rgba(42, 27, 22, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+a { color: var(--red); }
+
+/* ── Cabeçalho ─────────────────────────────────────────────────────── */
+.mast { background: linear-gradient(125deg, #76152a, #a20e35 58%, #c51f4b); color: #fff; padding: 20px clamp(16px, 4vw, 42px) 0; }
+.mast-topo { max-width: 1400px; margin: auto; display: flex; justify-content: space-between; gap: 22px; align-items: flex-end; flex-wrap: wrap; }
+.mast h1 { margin: 4px 0 0; font: 800 clamp(26px, 4vw, 40px)/1.05 Georgia, serif; letter-spacing: -0.03em; }
+.sobrancelha { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 850; opacity: 0.82; }
+.mast .sub { margin: 8px 0 0; max-width: 72ch; opacity: 0.92; }
+
+.kpis { display: flex; gap: 8px; flex-wrap: wrap; }
+.kpi { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 12px; padding: 8px 11px; min-width: 92px; }
+.kpi b { display: block; font-size: 20px; }
+.kpi span { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.82; }
+
+nav.abas { max-width: 1400px; margin: 14px auto 0; display: flex; gap: 6px; flex-wrap: wrap; }
+nav.abas a { border: 0; background: rgba(255, 255, 255, 0.14); color: #fff; border-radius: 10px 10px 0 0; padding: 10px 15px; font-weight: 750; text-decoration: none; font-size: 14px; }
+nav.abas a.on { background: var(--bg); color: var(--red-escuro); }
+
+main { max-width: 1400px; margin: auto; padding: 20px clamp(16px, 4vw, 42px) 80px; }
+
+/* ── Blocos ────────────────────────────────────────────────────────── */
+.aviso { display: flex; gap: 12px; align-items: flex-start; background: linear-gradient(90deg, #fff, #fff5f7); border: 1px solid #f2c8d2; border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; }
+.aviso strong { color: var(--red); }
+
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 15px; box-shadow: var(--sombra); }
+.card h2 { margin: 0 0 6px; font-size: 20px; }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+
+.grade { display: grid; gap: 13px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.titulo-secao { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; margin: 26px 0 11px; }
+.titulo-secao h2 { margin: 0; font-size: 22px; }
+.titulo-secao p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.muted { color: var(--muted); }
+.mini { font-size: 12px; }
+
+/* ── Selos ─────────────────────────────────────────────────────────── */
+.selo { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 9px; font-size: 10.5px; font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; background: #f2ece8; color: var(--muted); }
+.selo.alta, .selo.vermelho { background: var(--rosa-bg); color: #9f1239; }
+.selo.media, .selo.ambar { background: var(--ambar-bg); color: var(--ambar); }
+.selo.baixa, .selo.azul { background: var(--azul-bg); color: var(--azul); }
+.selo.verde { background: var(--verde-bg); color: var(--verde); }
+.selo.escuro { background: #3b3330; color: #fff; }
+
+/* Atenção: a faixa lateral diz o grau sem precisar de legenda. */
+.atencao { border-left: 5px solid var(--red); }
+.atencao.media { border-left-color: #d28a1d; }
+.atencao.baixa { border-left-color: #4b8a6f; }
+.atencao.info { border-left-color: #4b79a1; }
+
+.porque { background: #faf8f7; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
+.porque b { color: var(--red); }
+.porque ul { margin: 6px 0 0; padding-left: 18px; }
+.porque li { margin: 3px 0; }
+
+/* ── Barras de nota ────────────────────────────────────────────────── */
+.nota-linha { display: grid; grid-template-columns: 108px 1fr 34px; gap: 9px; align-items: center; font-size: 12px; margin: 7px 0; }
+.barra { height: 8px; background: #eee8e5; border-radius: 99px; overflow: hidden; }
+.barra i { height: 100%; display: block; border-radius: 99px; background: var(--red); }
+.barra.verde i { background: var(--verde); }
+.barra.ambar i { background: #a15c00; }
+.barra.azul i { background: var(--azul); }
+
+/* ── Lista do acervo ───────────────────────────────────────────────── */
+.linha { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.linha h3 { margin: 5px 0 6px; font-size: 15.5px; line-height: 1.3; }
+.meta { color: var(--muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.lista { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Mídia do Jornal ───────────────────────────────────────────────── */
+.midia { position: relative; background: #2a1c1d; border-radius: 12px; overflow: hidden; }
+.midia img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.midia .cred { position: absolute; right: 8px; bottom: 8px; font-size: 10.5px; color: #fff; background: rgba(0, 0, 0, 0.55); padding: 4px 7px; border-radius: 8px; max-width: 70%; }
+.midia .selos { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+.midia .selos .selo { background: #fff; }
+
+/* ── Canais ────────────────────────────────────────────────────────── */
+.canal { border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; background: #faf7f4; }
+.canal.nao { background: #faf6f6; opacity: 0.85; }
+.canal-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.canal b { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+.canal p { margin: 7px 0 0; font-size: 13px; white-space: pre-line; }
+.canal dl { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.canal dt { font-weight: 750; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; margin-top: 5px; }
+
+.proibido { background: #fff4f5; border: 1px solid #f3ccd4; border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
+.proibido b { color: #9f1239; }
+.proibido ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* ── Formulário / filtros ──────────────────────────────────────────── */
+.barra-filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+input, select { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; font: inherit; color: inherit; }
+input[type="search"] { min-width: 240px; flex: 1; }
+.btn { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 12px; font-weight: 750; cursor: pointer; font: inherit; font-weight: 750; }
+.btn.p { background: var(--red); color: #fff; border-color: var(--red); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 12px; cursor: pointer; font-weight: 750; font: inherit; font-weight: 750; text-decoration: none; color: inherit; font-size: 13px; }
+.chip.on { background: var(--red-escuro); color: #fff; border-color: var(--red-escuro); }
+
+.rodape { max-width: 1400px; margin: auto; padding: 0 clamp(16px, 4vw, 42px) 40px; color: var(--muted); font-size: 12px; }
+
+.sep { height: 1px; background: var(--line); margin: 13px 0; }
+
+@media (max-width: 1000px) {
+  .g4, .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+  .nota-linha { grid-template-columns: 90px 1fr 30px; }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cerebro-cruz-vermelha",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cérebro de Notícias da Cruz Vermelha Brasileira — Filial Rio de Janeiro. Observa, entende, decide. Não publica.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "coleta": "tsx scripts/coleta.ts",
+    "coleta:dry": "tsx scripts/coleta.ts --dry"
+  },
+  "dependencies": {
+    "next": "^16.3.3",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "tsx": "4.20.3",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=20.9"
+  }
+}

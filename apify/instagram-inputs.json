@@ -1,0 +1,53 @@
+{
+  "tempo_real": {
+    "username": [
+      "operacoesrio",
+      "sistemaalertario",
+      "defesacivilrio",
+      "vozdascomunidades",
+      "fogocruzadorj",
+      "ott_rio"
+    ],
+    "resultsLimit": 12,
+    "onlyPostsNewerThan": "2026-08-31",
+    "skipPinnedPosts": true
+  },
+  "diario": {
+    "username": [
+      "defesacivilrj",
+      "cbmerj",
+      "ineagovrj",
+      "hemorio",
+      "maredenoticias",
+      "falaroca",
+      "agencialume",
+      "metroriooficial",
+      "supervia_trens",
+      "ccrbarcas",
+      "cruzvermelhabrasileirarj"
+    ],
+    "resultsLimit": 8,
+    "onlyPostsNewerThan": "2026-08-30",
+    "skipPinnedPosts": true
+  },
+  "3_dias": {
+    "username": [
+      "saude_rio",
+      "saudegovrj",
+      "fiocruz",
+      "labjaca",
+      "cruzvermelhabrasileira"
+    ],
+    "resultsLimit": 8,
+    "onlyPostsNewerThan": "2026-08-28",
+    "skipPinnedPosts": true
+  },
+  "10_dias": {
+    "username": [
+      "ifrc"
+    ],
+    "resultsLimit": 8,
+    "onlyPostsNewerThan": "2026-08-21",
+    "skipPinnedPosts": true
+  }
+}
