@@ -99,7 +99,27 @@ async function main() {
     }
   }
 
-  console.log(dry ? "\n--dry: nada foi enviado para a Apify." : "\nPronto. Falta apontar o webhook — veja npm run webhook.");
+  if (dry) {
+    console.log("\n--dry: nada foi enviado para a Apify.");
+    return;
+  }
+
+  // Dizer "falta apontar o webhook" quando ele já está apontado manda a pessoa
+  // procurar problema onde não há. O script confere antes de mandar recado.
+  const webhooks = (await api<{ data: { items: { condition?: { actorTaskId?: string } }[] } }>(
+    "/webhooks?limit=1000",
+  )).data.items;
+  const comWebhook = new Set(webhooks.map((w) => w.condition?.actorTaskId).filter(Boolean));
+  const semWebhook = lotes.filter((l) => {
+    const t = tasksExistentes.find((x) => x.name === l.nome);
+    return !t || !comWebhook.has(t.id);
+  });
+
+  console.log(
+    semWebhook.length === 0
+      ? "\nPronto. Os webhooks já apontam para o app — a próxima coleta avisa sozinha."
+      : `\nPronto. ${semWebhook.length} task(s) ainda sem webhook: rode npm run webhook -- <url do app>.`,
+  );
 }
 
 main().catch((e) => {
