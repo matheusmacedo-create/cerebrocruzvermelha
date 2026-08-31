@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/coleta?cadencia=tempo_real", "schedule": "0 */6 * * *" },
+    { "path": "/api/coleta?cadencia=diario", "schedule": "20 9 * * *" },
+    { "path": "/api/coleta?cadencia=3_dias", "schedule": "40 9 */3 * *" },
+    { "path": "/api/coleta?cadencia=10_dias", "schedule": "0 10 1,11,21 * *" }
+  ]
+}
