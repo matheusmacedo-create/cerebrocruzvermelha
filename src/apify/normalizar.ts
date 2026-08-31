@@ -157,6 +157,25 @@ export function errosParaSaude(posts: PostInstagram[]): SaudeFonte[] {
   return saude;
 }
 
+/**
+ * Perfis que o Instagram bloqueou nesta run.
+ *
+ * `no_items` quase sempre é bloqueio, não conta vazia: o actor registra
+ * "Request got blocked" e desiste. O bloqueio é por sessão e intermitente —
+ * o mesmo perfil que falha agora costuma passar na tentativa seguinte.
+ *
+ * Vale separar de `not_found`, que é handle errado e retentar não resolve.
+ */
+export function perfisBloqueados(posts: PostInstagram[]): string[] {
+  const handles = new Set<string>();
+  for (const p of posts) {
+    if (p.error !== "no_items") continue;
+    const h = (p.inputUrl ?? p.url ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, "");
+    if (h) handles.add(h);
+  }
+  return [...handles];
+}
+
 export function postsParaItens(posts: PostInstagram[]): Item[] {
   const vistos = new Set<string>();
   const itens: Item[] = [];

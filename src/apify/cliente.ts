@@ -49,10 +49,21 @@ export interface RunApify {
   defaultKeyValueStoreId: string;
 }
 
-/** Dispara um actor e devolve a run, sem esperar o fim. */
-export async function rodarActor(actorId: string, input: unknown): Promise<RunApify> {
+/**
+ * Dispara um actor e devolve a run, sem esperar o fim.
+ *
+ * `avisarEm` anexa um webhook só desta run. Os webhooks fixos estão presos às
+ * Tasks agendadas, então uma run avulsa — como a retentativa de perfis
+ * bloqueados — passaria despercebida sem isto.
+ */
+export async function rodarActor(actorId: string, input: unknown, avisarEm?: string): Promise<RunApify> {
   const id = actorId.replace("/", "~");
-  const r = await api<{ data: RunApify }>(`/acts/${id}/runs`, {
+  const q = new URLSearchParams();
+  if (avisarEm) {
+    const webhooks = [{ eventTypes: ["ACTOR.RUN.SUCCEEDED"], requestUrl: avisarEm }];
+    q.set("webhooks", Buffer.from(JSON.stringify(webhooks)).toString("base64"));
+  }
+  const r = await api<{ data: RunApify }>(`/acts/${id}/runs${q.size ? `?${q}` : ""}`, {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -8,7 +8,7 @@
  */
 import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "../src/apify/cliente";
 import { inputInstagram, resumoDaLista, type Cadencia } from "../src/apify/input";
-import { errosParaSaude, postsParaItens, type PostInstagram } from "../src/apify/normalizar";
+import { errosParaSaude, perfisBloqueados, postsParaItens, type PostInstagram } from "../src/apify/normalizar";
 import { montarAcervo } from "../src/dados/montar";
 import { chavesGuardadas, guardarMidias, podarMidia } from "../src/apify/midia";
 import type { Acervo } from "../src/core/tipos";
@@ -53,7 +53,21 @@ async function main() {
   }
 
   console.log("Aguardando o dataset encher…");
-  const posts = await esperarDataset(run.defaultDatasetId);
+  let posts = await esperarDataset(run.defaultDatasetId);
+
+  // Mesma regra do webhook: bloqueio do Instagram é intermitente e o perfil
+  // bloqueado não é cobrado, então uma retentativa sai de graça.
+  const bloqueados = perfisBloqueados(posts);
+  if (bloqueados.length > 0) {
+    console.log(`\n${bloqueados.length} perfil(is) bloqueado(s): ${bloqueados.join(", ")}. Retentando uma vez…`);
+    const r2 = await rodarActor(ACTOR_INSTAGRAM, {
+      username: bloqueados, resultsLimit: 8, skipPinnedPosts: true, onlyPostsNewerThan: "2 days",
+    });
+    const extras = await esperarDataset(r2.defaultDatasetId);
+    const ganhos = extras.filter((p) => p.ownerUsername).length;
+    console.log(`  a retentativa trouxe ${ganhos} post(s).`);
+    posts = [...posts, ...extras];
+  }
   const novos = postsParaItens(posts);
   console.log(`${posts.length} posts lidos, ${novos.length} aceitos pela lista fechada.`);
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, temToken } from "@/apify/cliente";
-import { errosParaSaude, postsParaItens, type PostInstagram } from "@/apify/normalizar";
+import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "@/apify/cliente";
+import { errosParaSaude, perfisBloqueados, postsParaItens, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
 import { chavesGuardadas, guardarMidias, podarMidia } from "@/apify/midia";
 import type { Acervo } from "@/core/tipos";
@@ -66,6 +66,23 @@ export async function POST(req: Request) {
 
     for (const p of ["/", "/jornal", "/acervo", "/calendario", "/fontes"]) revalidatePath(p);
 
+    // O Instagram bloqueia perfis de forma intermitente e o actor desiste na
+    // primeira recusa — numa coleta diária, 7 de 8 perfis chegaram a falhar.
+    // Perfil bloqueado não gera post, logo não é cobrado: retentar só custa o
+    // que teríamos pago se não houvesse bloqueio. Uma vez só, e a run carrega
+    // o marcador para não virar laço.
+    const retentativa = url.searchParams.get("retry") === "1";
+    const bloqueados = retentativa ? [] : perfisBloqueados(posts);
+    if (bloqueados.length > 0) {
+      const aviso = new URL(req.url);
+      aviso.searchParams.set("retry", "1");
+      await rodarActor(
+        ACTOR_INSTAGRAM,
+        { username: bloqueados, resultsLimit: 8, skipPinnedPosts: true, onlyPostsNewerThan: "2 days" },
+        aviso.toString(),
+      ).catch(() => {});
+    }
+
     return NextResponse.json({
       ok: true,
       lidos: posts.length,
@@ -74,6 +91,7 @@ export async function POST(req: Request) {
       falhas: errosParaSaude(posts).length,
       total: snapshot.totais.itens,
       midia: { ...midia, podadas },
+      retentando: bloqueados,
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 502 });

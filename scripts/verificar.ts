@@ -3,7 +3,7 @@ import { decidir, ehSinal } from "../src/core/mente";
 import { agrupar, familia } from "../src/core/agrupar";
 import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
-import { errosParaSaude, postsParaItens } from "../src/apify/normalizar";
+import { errosParaSaude, perfisBloqueados, postsParaItens } from "../src/apify/normalizar";
 import { semORepetido } from "../src/ui/texto";
 import { chaveMidia } from "../src/apify/midia";
 import { CONTAS, perfisInstagram } from "../src/core/contas";
@@ -107,6 +107,14 @@ checar("bloqueio e handle errado são distinguidos",
   saude[0].detalhe.includes("bloqueou") && saude[1].detalhe.includes("não encontrado"));
 checar("saúde de erro nomeia a conta quando ela existe na lista",
   saude[0].fonte.includes("Defesa Civil do Estado"));
+// Bloqueio se retenta; handle errado não — retentar não conserta digitação.
+const bloq = perfisBloqueados([
+  { inputUrl: "https://www.instagram.com/defesacivilrj", error: "no_items" },
+  { inputUrl: "https://www.instagram.com/naoexiste", error: "not_found" },
+  { id: "9", ownerUsername: "operacoesrio", caption: "ok", url: "u" },
+]);
+checar("só perfil bloqueado entra na retentativa",
+  bloq.length === 1 && bloq[0] === "defesacivilrj", bloq.join(","));
 
 // 6c. Boletins repetidos são agrupados, e a escalada continua aparecendo
 const boletins = [
