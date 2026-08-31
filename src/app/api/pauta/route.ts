@@ -100,6 +100,14 @@ export async function GET(req: Request) {
             direito: d,
             // A trava que atravessa o projeto, explícita no contrato.
             podePublicar: podePublicar(d),
+            /*
+             * Se a mídia é da própria filial. Material que a Casa publicou no
+             * seu Instagram é dela, e tratar isso como "de terceiro" impediria
+             * a filial de reaproveitar a própria foto — que não é a regra que
+             * o Cérebro sustenta. Continua exigindo autorização humana antes
+             * de publicar, mas por um motivo diferente: quem aparece na foto.
+             */
+            daCasa: conta?.vinculo === "casa",
             credito: item.midia.credito,
           }
         : null,
