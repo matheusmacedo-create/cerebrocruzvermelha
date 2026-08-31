@@ -5,7 +5,7 @@ import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
 import { errosParaSaude, postsParaItens } from "../src/apify/normalizar";
 import { CONTAS, perfisInstagram } from "../src/core/contas";
-import { inputInstagram } from "../src/apify/input";
+import { AGENDA, CADENCIAS, JANELA, inputInstagram } from "../src/apify/input";
 import type { Item } from "../src/core/tipos";
 import { SEMENTE } from "../src/dados/acervo";
 
@@ -165,6 +165,12 @@ checar(
 checar("toda conta com Instagram declara o estado do handle",
   CONTAS.filter((c) => c.instagram).every((c) => Boolean(c.instagramStatus)));
 checar("input filtra por data", Boolean(inp.onlyPostsNewerThan));
+// Data relativa e não absoluta: o input fica guardado na Task agendada, e
+// uma data fixa envelheceria ali dentro sem ninguém perceber.
+checar("a janela é relativa, não uma data fixa",
+  /^\d+ (days|months|years)$/.test(inp.onlyPostsNewerThan ?? ""), String(inp.onlyPostsNewerThan));
+checar("toda cadência tem janela e agenda",
+  CADENCIAS.every((c) => JANELA[c]?.apify && AGENDA[c]?.cron), `${CADENCIAS.length} cadências`);
 checar("input pula fixados", inp.skipPinnedPosts === true);
 checar("todo perfil do input está na lista", inp.username.every((u) => perfisInstagram().includes(u)));
 

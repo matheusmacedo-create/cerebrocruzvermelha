@@ -12,7 +12,9 @@
     "coleta": "tsx --env-file-if-exists=.env.local scripts/coleta.ts",
     "coleta:dry": "tsx --env-file-if-exists=.env.local scripts/coleta.ts --dry",
     "handles": "tsx --env-file-if-exists=.env.local scripts/verificar-handles.ts",
-    "verificar": "tsx scripts/verificar.ts"
+    "verificar": "tsx scripts/verificar.ts",
+    "provisionar": "tsx --env-file-if-exists=.env.local scripts/provisionar-apify.ts",
+    "webhook": "tsx --env-file-if-exists=.env.local scripts/webhook-apify.ts"
   },
   "dependencies": {
     "next": "^16.3.3",

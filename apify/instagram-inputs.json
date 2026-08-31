@@ -7,7 +7,7 @@
       "vozdascomunidades"
     ],
     "resultsLimit": 12,
-    "onlyPostsNewerThan": "2026-08-31",
+    "onlyPostsNewerThan": "1 days",
     "skipPinnedPosts": true
   },
   "diario": {
@@ -22,7 +22,7 @@
       "cruzvermelhabrasileirarj"
     ],
     "resultsLimit": 8,
-    "onlyPostsNewerThan": "2026-08-30",
+    "onlyPostsNewerThan": "2 days",
     "skipPinnedPosts": true
   },
   "3_dias": {
@@ -34,7 +34,7 @@
       "cruzvermelhabrasileira"
     ],
     "resultsLimit": 8,
-    "onlyPostsNewerThan": "2026-08-28",
+    "onlyPostsNewerThan": "4 days",
     "skipPinnedPosts": true
   },
   "10_dias": {
@@ -42,7 +42,7 @@
       "ifrc"
     ],
     "resultsLimit": 8,
-    "onlyPostsNewerThan": "2026-08-21",
+    "onlyPostsNewerThan": "11 days",
     "skipPinnedPosts": true
   }
 }

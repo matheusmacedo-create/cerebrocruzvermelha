@@ -28,7 +28,13 @@ npm run build          # build de produção
 npm run verificar      # checagens do motor sobre dados reais
 npm run coleta:dry     # mostra o que iria para a Apify, sem gastar
 npm run handles        # confere a lista fechada contra a Apify
+npm run provisionar    # cria/atualiza as Tasks e Schedules da coleta
+npm run webhook -- <url do app>   # aponta os webhooks para o app publicado
 ```
+
+A coleta é **agendada na Apify**, não pelo cron da Vercel: ela é responsabilidade
+da Apify, e agendar onde acontece tira a dependência do cron — que o plano Hobby
+limita — deixando o app com um papel só, o de receber o webhook.
 
 Sem `APIFY_TOKEN` o Cérebro abre no **acervo semente** do repositório — a coleta
 real de 30/08/2026, com 263 sinais, 29 peças e 52 datas. Ele nunca abre vazio.

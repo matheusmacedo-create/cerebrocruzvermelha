@@ -1,6 +1,6 @@
 import { carregarAcervo } from "@/dados/acervo";
 import { CATEGORIAS, CONTAS, SOMENTE_INTERNO, contasSemInstagram } from "@/core/contas";
-import { JANELA_HORAS } from "@/apify/input";
+import { AGENDA, JANELA } from "@/apify/input";
 import type { Conta } from "@/core/tipos";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
@@ -105,8 +105,8 @@ export default async function Fontes() {
                   </div>
                 )}
                 <p className="mini muted" style={{ marginTop: 8, marginBottom: 0 }}>
-                  Eixos: {c.eixos.join(", ").replace(/_/g, " ")} · janela de{" "}
-                  {JANELA_HORAS[c.cadencia]}h
+                  Eixos: {c.eixos.join(", ").replace(/_/g, " ")} · coleta{" "}
+                  {AGENDA[c.cadencia].descricao}, buscando {JANELA[c.cadencia].rotulo} para trás
                 </p>
               </article>
             ))}

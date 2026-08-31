@@ -18,22 +18,42 @@ cp .env.example .env.local
 | `APIFY_WEBHOOK_SECRET` | Conferido em `/api/webhook/apify?segredo=…`. |
 | `CRON_SECRET` | Protege `/api/coleta`. O Cron da Vercel envia como `Bearer`. |
 
-## Cadências
+## Quem agenda a coleta
 
-A lista fechada declara a cadência de cada conta, e é dela que sai o input do
-actor — a lista de perfis nunca é digitada à mão num painel.
+**A Apify, não a Vercel.** A coleta é responsabilidade da Apify, e agendar onde
+ela acontece tem duas vantagens: some a dependência do cron da Vercel — que o
+plano Hobby limita — e o app fica com um papel só, o de receber o webhook.
 
-| Cadência | Janela | Cron | Contas |
+Quatro Tasks, uma por cadência, cada uma com sua Schedule. Os perfis saem de
+`src/core/contas.ts` e nunca são digitados à mão num painel:
+
+```bash
+npm run provisionar -- --dry   # mostra o que faria, sem tocar na conta
+npm run provisionar            # cria ou atualiza as 4 Tasks e Schedules
+```
+
+É idempotente: rodar de novo atualiza o que existe. **Rode sempre que a lista
+fechada mudar**, senão as Tasks seguem pedindo os perfis antigos.
+
+| Cadência | Agenda | Janela | Perfis |
 |---|---|---|---|
-| `tempo_real` | 6h | a cada 6 horas | COR-Rio, Alerta Rio, Defesa Civil do Rio, Voz das Comunidades, Fogo Cruzado, OTT |
-| `diario` | 30h | 09:20 | SEDEC-RJ, CBMERJ, INEA, Hemorio, Maré, Fala Roça, Lume, mobilidade, filial RJ |
-| `3_dias` | 78h | 09:40, a cada 3 dias | SMS-Rio, SES-RJ, Fiocruz, LabJaca, CVB nacional |
-| `10_dias` | 246h | dias 1, 11 e 21 | IFRC |
+| `tempo_real` | a cada 6 horas | 1 dia | COR-Rio, Alerta Rio, Defesa Civil do Rio, Voz das Comunidades |
+| `diario` | 9h20 | 2 dias | SEDEC-RJ, CBMERJ, Hemorio, Redes da Maré, Fala Roça, Lume, MetrôRio, filial RJ |
+| `3_dias` | 9h40, a cada 3 dias | 4 dias | SMS-Rio, SES-RJ, Fiocruz, LabJaca, CVB nacional |
+| `10_dias` | dias 1, 11 e 21 | 11 dias | IFRC |
+
+Horários em `America/Sao_Paulo` — boletim de chuva do Rio se lê em horário do Rio.
+
+**A janela é relativa** (`"1 days"`, `"2 days"`), nunca uma data absoluta. O input
+fica guardado dentro da Task, e uma data fixa envelheceria ali dentro sem ninguém
+perceber. Ela também é mais larga que o intervalo entre as runs de propósito: se
+uma run falhar, a seguinte alcança o que a anterior perdeu, e a deduplicação por
+id impede que o mesmo post entre duas vezes.
 
 Três coisas seguram o custo: o teto de posts por perfil (12 em tempo real, 8 nas
-demais), o `onlyPostsNewerThan` — que filtra data do lado da Apify, antes de você
-pagar pelo item — e o `skipPinnedPosts`, já que post fixado é institucional
-antigo, não sinal.
+demais), o `onlyPostsNewerThan` — que filtra do lado da Apify, antes de você pagar
+pelo item — e o `skipPinnedPosts`, já que post fixado é institucional antigo, não
+sinal.
 
 ## Conferir antes de gastar
 
@@ -44,10 +64,17 @@ npm run coleta -- --cadencia diario      # dispara, espera a run e grava o snaps
 
 ## Webhook
 
-Na Apify, no actor ou na task, crie um webhook:
+Depois de publicar o app, aponte os webhooks das Tasks para ele:
 
-- Evento: `ACTOR.RUN.SUCCEEDED`
-- URL: `https://<seu-app>/api/webhook/apify?segredo=<APIFY_WEBHOOK_SECRET>`
+```bash
+npm run webhook -- https://seu-app.vercel.app
+```
+
+Cria um webhook `ACTOR.RUN.SUCCEEDED` por Task, apontando para
+`/api/webhook/apify?segredo=<APIFY_WEBHOOK_SECRET>`. Também é idempotente.
+
+Sem isto as coletas rodam mas o app não fica sabendo — ele segue servindo o
+último snapshot até alguém reparar.
 
 Ao receber, o app lê o dataset da run, normaliza contra a lista fechada, mescla no
 snapshot por id — o mesmo post coletado duas vezes não vira dois sinais — grava no
@@ -56,11 +83,18 @@ Key-Value Store e revalida as telas.
 A resposta diz quantos foram lidos, aceitos e descartados. `descartados` alto é
 sinal de que um handle da lista mudou.
 
-## Cron na Vercel
+## Coleta fora da agenda
 
-`vercel.json` já traz as quatro entradas. A Vercel envia `Authorization: Bearer
-$CRON_SECRET`, conferido em `/api/coleta`. Sem `CRON_SECRET` definido a rota só
-responde fora de produção.
+`/api/coleta?cadencia=diario` força uma coleta à mão — útil depois de mexer na
+lista fechada, ou quando um bloqueio do Instagram derrubou a run anterior.
+Protegida por `CRON_SECRET` (`Authorization: Bearer …`); sem o segredo definido
+ela só responde fora de produção, porque um endpoint que gasta crédito da Apify
+não pode ficar público por esquecimento de configuração.
+
+Pela linha de comando: `npm run coleta -- --cadencia diario`.
+
+`vercel.json` **não tem crons**. O plano Hobby limita cron, e de todo modo a
+agenda vive na Apify.
 
 ## Diagnóstico
 

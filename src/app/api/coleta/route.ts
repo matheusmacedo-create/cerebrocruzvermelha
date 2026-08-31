@@ -7,10 +7,14 @@ export const dynamic = "force-dynamic";
 const CADENCIAS: Cadencia[] = ["tempo_real", "diario", "3_dias", "10_dias"];
 
 /**
- * Dispara a coleta na Apify.
+ * Dispara uma coleta na Apify, fora da agenda.
  *
- * Chamada pelo Cron da Vercel (GET, com o header do Vercel Cron) ou à mão
- * com o segredo. A run é assíncrona: quem monta o snapshot é o webhook.
+ * A coleta de rotina NÃO passa por aqui: ela é agendada na própria Apify
+ * (`npm run provisionar`), que é onde a coleta acontece. Isto existe para
+ * forçar uma coleta à mão — depois de mexer na lista fechada, ou quando um
+ * bloqueio do Instagram derrubou a run anterior.
+ *
+ * A run é assíncrona; quem monta o snapshot é o webhook.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -48,7 +52,9 @@ export async function GET(req: Request) {
 
 function autorizado(req: Request): boolean {
   const segredo = process.env.CRON_SECRET;
-  // Sem segredo configurado, a rota fica aberta apenas fora de produção.
+  // Sem segredo configurado a rota fica aberta apenas fora de produção:
+  // um endpoint que gasta crédito da Apify não pode ficar público por
+  // esquecimento de configuração.
   if (!segredo) return process.env.NODE_ENV !== "production";
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${segredo}`;
