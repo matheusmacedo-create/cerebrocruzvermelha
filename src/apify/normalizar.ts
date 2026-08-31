@@ -56,13 +56,30 @@ function direitoDaConta(vinculo: string | undefined): Direito {
   }
 }
 
-/** Primeira linha da legenda vira título; o resto vira resumo. */
+/**
+ * Primeira frase da legenda vira título; a legenda inteira vira resumo.
+ *
+ * Com teto: boletim do COR-Rio abre com uma frase inteira antes do primeiro
+ * ponto — "TEMPO AGORA | CHUVA MODERADA NA ZONA OESTE (31/08 - 11H10) De acordo
+ * com o Sistema Alerta Rio, entre 10h45 e 11h, houve registro de ..." — e sem
+ * o corte o título vira o resumo e ocupa três linhas do cartão.
+ */
+const TETO_TITULO = 96;
+
 function tituloEResumo(caption: string | undefined): { titulo: string; resumo: string } {
   const limpa = (caption ?? "").replace(/\s+/g, " ").trim();
   if (!limpa) return { titulo: "Post sem legenda", resumo: "" };
-  const corte = limpa.search(/(?<=[.!?])\s|\n/);
-  const titulo = (corte > 20 ? limpa.slice(0, corte) : limpa.slice(0, 120)).trim();
-  return { titulo: titulo || limpa.slice(0, 120), resumo: limpa.slice(0, 600) };
+
+  const fim = limpa.search(/(?<=[.!?])\s|\n/);
+  const corte = fim > 20 && fim <= TETO_TITULO ? fim : TETO_TITULO;
+  let titulo = limpa.slice(0, corte).trim();
+  // Corta em palavra inteira quando o teto caiu no meio de uma.
+  if (corte === TETO_TITULO && limpa.length > TETO_TITULO) {
+    const ultimoEspaco = titulo.lastIndexOf(" ");
+    if (ultimoEspaco > 40) titulo = titulo.slice(0, ultimoEspaco);
+    titulo += "…";
+  }
+  return { titulo: titulo || limpa.slice(0, TETO_TITULO), resumo: limpa.slice(0, 600) };
 }
 
 /**

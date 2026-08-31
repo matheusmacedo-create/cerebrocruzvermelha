@@ -141,6 +141,17 @@ checar("o agrupamento é explicado na decisão",
 const soltos = agrupar([{ item: base({ id: "s", contaId: "cvrj", fonte: "Cruz Vermelha RJ", titulo: "Filial abre turma nova de primeiros socorros na Escola do Rio", resumo: "x".repeat(50), quando: new Date().toISOString() }), score: decidir(base({}), ctx) }]);
 checar("item único não é alterado pelo agrupamento", soltos.length === 1 && soltos[0].semelhantes === 0);
 
+// 6d. Título de boletim longo é cortado; título curto fica inteiro
+const [longo] = postsParaItens([{ id: "L", ownerUsername: "operacoesrio",
+  caption: "TEMPO AGORA | CHUVA MODERADA NA ZONA OESTE DO RIO (31/08/2026 - 11H10) De acordo com o Sistema Alerta Rio, entre 10h45 e 11h, houve registro de chuva moderada na estação Santa Cruz (2,6 mm).",
+  url: "u", timestamp: "2026-08-31T11:10:00Z" }]);
+checar("título longo é cortado", longo.titulo.length <= 100 && longo.titulo.endsWith("…"), `${longo.titulo.length} chars`);
+checar("título cortado não parte palavra", !/\s\S{1,3}…$/.test(longo.titulo), longo.titulo.slice(-28));
+checar("resumo mantém a legenda inteira", longo.resumo.length > longo.titulo.length);
+const [curto] = postsParaItens([{ id: "C", ownerUsername: "cbmerj",
+  caption: "Bombeiros atendem ocorrência na Tijuca. Equipes seguem no local.", url: "u2", timestamp: "2026-08-31T09:00:00Z" }]);
+checar("título curto fica inteiro", curto.titulo === "Bombeiros atendem ocorrência na Tijuca.", curto.titulo);
+
 // 7. Input da Apify sai da lista, não da mão
 const inp = inputInstagram("tempo_real");
 checar("input tempo real tem perfis", inp.username.length > 0, `${inp.username.length} perfis`);
