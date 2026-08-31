@@ -5,6 +5,8 @@ import { CANAL_ROTULO, planoDeCanais, proibicoes } from "@/core/canais";
 import { resolverConta } from "@/core/contas";
 import { corDoDireito, corDoModo, corDoVeredito } from "./selos";
 import { Barras } from "./Barras";
+import { Midia } from "./Midia";
+import { semORepetido } from "./texto";
 
 /**
  * O cartão do Jornal.
@@ -42,16 +44,13 @@ export function CartaoJornal({ item, score, semelhantes = 0 }: { item: Item; sco
       </div>
 
       {item.midia && (
-        <div className="midia" style={{ height: 190, marginTop: 11 }}>
-          {/* Referência de triagem, servida da fonte, nunca rehospedada. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.midia.url} alt="" loading="lazy" referrerPolicy="no-referrer" />
-          <div className="cred">{credito(item)}</div>
+        <div style={{ marginTop: 11 }}>
+          <Midia id={item.id} midia={item.midia} credito={credito(item)} altura={300} href={item.url} inteira />
         </div>
       )}
 
       <h2 style={{ marginTop: 11 }}>{item.titulo}</h2>
-      <p className="mini muted">{item.resumo.slice(0, 320)}</p>
+      <p className="mini muted">{semORepetido(item.titulo, item.resumo).slice(0, 320)}</p>
 
       <div className="porque">
         <b>Como o Cérebro leu isso.</b>

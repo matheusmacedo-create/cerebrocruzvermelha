@@ -150,6 +150,32 @@ Uma run por handle, porque em lote o actor omite o `inputUrl` nos registros de
 `not_found` e não dá para saber qual falhou. Handle inexistente não gera post
 cobrável, então conferir custa quase nada.
 
+## Mídia
+
+As URLs da CDN do Instagram são **assinadas e expiram em cerca de 4 dias**.
+Apontar o app direto para elas faria a mídia aparecer na coleta e morrer depois —
+o Jornal viraria uma parede de imagens quebradas justamente quando alguém volta
+para revisar uma decisão antiga.
+
+Então a coleta copia a **capa** de cada post para o Key-Value Store, e o app a
+serve por `/api/midia/[id]`, com cache imutável: os bytes de um id nunca mudam.
+Se a capa não estiver no store, a rota busca na fonte uma vez e guarda; se a URL
+já expirou, devolve 404 e o cartão mostra a marcação em vez de uma imagem
+quebrada.
+
+Só a capa. Vídeo de reels tem megabytes e o Cérebro não é arquivo de vídeo — o
+cartão leva para a fonte, com o play em cima da capa.
+
+Isto é cache de exibição para a triagem interna e **não muda nada sobre direito
+de imagem**: o que não é `autorizado` continua sem poder entrar numa peça da
+filial, e o selo de direito fica sobre a própria imagem para que quem bate o
+olho saiba disso antes de querer usar.
+
+O acervo guarda no máximo **400 sinais de rede social** (`TETO_ITENS_REDE`),
+os mais recentes. Sem esse teto o acervo mesclaria para sempre e o store cresceria
+junto — a coleta roda de 6 em 6 horas. A mídia de item que saiu do acervo é
+apagada na coleta seguinte.
+
 ## Custo medido
 
 Medido em runs reais de 31/08/2026: **US$ 0,0023 por post** (US$ 2,30/mil).

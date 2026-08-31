@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, temToken } from "@/apify/cliente";
 import { errosParaSaude, postsParaItens, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
+import { chavesGuardadas, guardarMidias, podarMidia } from "@/apify/midia";
 import type { Acervo } from "@/core/tipos";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,15 @@ export async function POST(req: Request) {
     const snapshot = montarAcervo({ novos, base, saudeColeta: errosParaSaude(posts) });
     await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
 
+    // As URLs da CDN expiram em dias: os bytes são copiados agora, enquanto
+    // ainda respondem. Falha aqui não invalida a coleta — o sinal já entrou.
+    const jaTem = await chavesGuardadas().catch(() => new Set<string>());
+    const midia = await guardarMidias(
+      snapshot.itens.filter((i) => novos.some((n) => n.id === i.id)),
+      jaTem,
+    ).catch(() => ({ guardadas: 0, falhas: 0, semMidia: 0, jaTinham: 0 }));
+    const podadas = await podarMidia(new Set(snapshot.itens.map((i) => i.id))).catch(() => 0);
+
     for (const p of ["/", "/jornal", "/acervo", "/calendario", "/fontes"]) revalidatePath(p);
 
     return NextResponse.json({
@@ -63,6 +73,7 @@ export async function POST(req: Request) {
       descartados: posts.length - novos.length,
       falhas: errosParaSaude(posts).length,
       total: snapshot.totais.itens,
+      midia: { ...midia, podadas },
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 502 });

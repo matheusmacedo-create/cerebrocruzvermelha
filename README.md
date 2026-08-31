@@ -89,6 +89,10 @@ Elas mandam mais que a soma das notas.
   explícita não entra.
 - **A lista fechada é a fronteira.** Post de conta fora dela é descartado na
   normalização, antes de chegar ao motor.
+- **A mídia é servida do nosso cache, não da CDN da fonte.** As URLs do
+  Instagram expiram em dias; a coleta copia a capa e o app a serve por
+  `/api/midia/[id]`. Cache de exibição para triagem — o selo de direito fica
+  sobre a imagem e `autorizado` continua sendo o único que publica.
 - **Handle quebrado não falha em silêncio.** Perfil que a Apify não encontra vira
   saúde de fonte visível na tela de Fontes, e conta sem handle confirmado nem
   entra na coleta. Uma fonte que some sem avisar é a falha mais cara aqui.

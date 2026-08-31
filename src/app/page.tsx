@@ -5,6 +5,8 @@ import { CONTAS } from "@/core/contas";
 import { agrupar } from "@/core/agrupar";
 import { corDoModo, faixaDeAtencao } from "@/ui/selos";
 import { Barras } from "@/ui/Barras";
+import { Midia } from "@/ui/Midia";
+import { semORepetido } from "@/ui/texto";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -75,8 +77,23 @@ export default async function Hoje() {
                   {semelhantes > 0 ? ` · +${semelhantes} semelhantes` : ""}
                 </span>
               </div>
-              <h2 style={{ marginTop: 8 }}>{item.titulo}</h2>
-              <p className="mini muted">{item.resumo.slice(0, 190)}…</p>
+              <div className="cartao-com-midia" style={{ marginTop: 9 }}>
+                {item.midia && (
+                  <div className="midia-fina">
+                    <Midia
+                      id={item.id}
+                      midia={item.midia}
+                      credito={item.midia.formato}
+                      altura={104}
+                      href={item.url}
+                    />
+                  </div>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ margin: 0 }}>{item.titulo}</h2>
+                  <p className="mini muted">{semORepetido(item.titulo, item.resumo).slice(0, 180)}…</p>
+                </div>
+              </div>
               <div className="porque">
                 <b>Por que apareceu?</b>
                 <ul>

@@ -4,6 +4,8 @@ import { agrupar, familia } from "../src/core/agrupar";
 import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
 import { errosParaSaude, postsParaItens } from "../src/apify/normalizar";
+import { semORepetido } from "../src/ui/texto";
+import { chaveMidia } from "../src/apify/midia";
 import { CONTAS, perfisInstagram } from "../src/core/contas";
 import { AGENDA, CADENCIAS, JANELA, inputInstagram } from "../src/apify/input";
 import type { Item } from "../src/core/tipos";
@@ -151,6 +153,13 @@ checar("resumo mantém a legenda inteira", longo.resumo.length > longo.titulo.le
 const [curto] = postsParaItens([{ id: "C", ownerUsername: "cbmerj",
   caption: "Bombeiros atendem ocorrência na Tijuca. Equipes seguem no local.", url: "u2", timestamp: "2026-08-31T09:00:00Z" }]);
 checar("título curto fica inteiro", curto.titulo === "Bombeiros atendem ocorrência na Tijuca.", curto.titulo);
+
+// 6e. O resumo não repete o título no cartão
+checar("resumo perde o prefixo repetido",
+  semORepetido("TEMPO AGORA | CHUVA NO RIO…", "TEMPO AGORA | CHUVA NO RIO. Segundo o Alerta Rio, choveu.") === "Segundo o Alerta Rio, choveu.");
+checar("resumo diferente do título fica intacto",
+  semORepetido("Um título", "Um resumo que não começa igual") === "Um resumo que não começa igual");
+checar("chave de mídia é derivada do id", chaveMidia("abc123") === "midia-abc123");
 
 // 7. Input da Apify sai da lista, não da mão
 const inp = inputInstagram("tempo_real");

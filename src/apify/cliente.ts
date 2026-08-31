@@ -109,6 +109,61 @@ export async function gravarKV(storeId: string, chave: string, valor: unknown): 
   if (!r.ok) throw new Error(`Apify KV ${r.status} ao gravar ${chave}`);
 }
 
+/** Grava bytes crus no Key-Value Store — é onde a mídia coletada fica. */
+export async function gravarKVBinario(
+  storeId: string,
+  chave: string,
+  bytes: ArrayBuffer,
+  contentType: string,
+): Promise<void> {
+  const r = await fetch(`${BASE}/key-value-stores/${storeId}/records/${chave}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token()}`, "Content-Type": contentType },
+    body: bytes,
+  });
+  if (!r.ok) throw new Error(`Apify KV ${r.status} ao gravar ${chave}`);
+}
+
+/** Lê bytes crus. Devolve null quando a chave não existe. */
+export async function lerKVBinario(
+  storeId: string,
+  chave: string,
+): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  const r = await fetch(`${BASE}/key-value-stores/${storeId}/records/${chave}`, {
+    headers: { Authorization: `Bearer ${token()}` },
+    cache: "no-store",
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`Apify KV ${r.status} ao ler ${chave}`);
+  return {
+    bytes: await r.arrayBuffer(),
+    contentType: r.headers.get("content-type") ?? "application/octet-stream",
+  };
+}
+
+/** Lista as chaves do store. Usada para podar mídia órfã. */
+export async function listarChavesKV(storeId: string, prefixo?: string): Promise<string[]> {
+  const chaves: string[] = [];
+  let exclusiveStartKey: string | undefined;
+  do {
+    const q = new URLSearchParams({ limit: "1000" });
+    if (exclusiveStartKey) q.set("exclusiveStartKey", exclusiveStartKey);
+    const r = await api<{ data: { items: { key: string }[]; isTruncated: boolean; nextExclusiveStartKey?: string } }>(
+      `/key-value-stores/${storeId}/keys?${q}`,
+    );
+    for (const { key } of r.data.items) if (!prefixo || key.startsWith(prefixo)) chaves.push(key);
+    exclusiveStartKey = r.data.isTruncated ? r.data.nextExclusiveStartKey : undefined;
+  } while (exclusiveStartKey);
+  return chaves;
+}
+
+export async function apagarKV(storeId: string, chave: string): Promise<void> {
+  await fetch(`${BASE}/key-value-stores/${storeId}/records/${chave}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token()}` },
+  });
+}
+
 export function temToken(): boolean {
   return Boolean(process.env.APIFY_TOKEN);
 }

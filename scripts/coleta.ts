@@ -10,6 +10,7 @@ import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, r
 import { inputInstagram, resumoDaLista, type Cadencia } from "../src/apify/input";
 import { errosParaSaude, postsParaItens, type PostInstagram } from "../src/apify/normalizar";
 import { montarAcervo } from "../src/dados/montar";
+import { chavesGuardadas, guardarMidias, podarMidia } from "../src/apify/midia";
 import type { Acervo } from "../src/core/tipos";
 
 const args = process.argv.slice(2);
@@ -63,6 +64,13 @@ async function main() {
   for (const f of falhas) console.log(`  ! ${f.fonte}: ${f.detalhe}`);
   await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
   console.log(`Snapshot gravado: ${snapshot.totais.itens} sinais, ${snapshot.totais.alta} de relevância alta.`);
+
+  // Mesma regra do webhook: copiar a capa enquanto a URL da CDN ainda responde.
+  const jaTem = await chavesGuardadas();
+  const m = await guardarMidias(snapshot.itens, jaTem);
+  console.log(`Mídia: ${m.guardadas} guardadas · ${m.jaTinham} já no cache · ${m.falhas} falharam · ${m.semMidia} sinais sem capa.`);
+  const podadas = await podarMidia(new Set(snapshot.itens.map((i) => i.id)));
+  if (podadas) console.log(`${podadas} arquivo(s) de mídia órfã apagado(s).`);
 }
 
 /** A run é assíncrona; sondamos o dataset até parar de crescer. */
