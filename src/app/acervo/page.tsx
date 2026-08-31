@@ -2,6 +2,7 @@ import Link from "next/link";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { MODO_ROTULO } from "@/core/mente";
 import { corDaRelevancia, corDoModo } from "@/ui/selos";
+import { lerContextoDaRedacao } from "@/dados/redacao";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -16,8 +17,8 @@ type Busca = { q?: string; rel?: string; fonte?: string; tipo?: string };
  */
 export default async function Acervo({ searchParams }: { searchParams: Promise<Busca> }) {
   const { q, rel, fonte, tipo } = await searchParams;
-  const acervo = await carregarAcervo();
-  const ctx = { hoje: acervo.hoje };
+  const [acervo, daRedacao] = await Promise.all([carregarAcervo(), lerContextoDaRedacao()]);
+  const ctx = { hoje: acervo.hoje, ...daRedacao };
 
   const fontes = [...new Set(acervo.itens.map((i) => i.fonte))].sort();
   const tipos = [...new Set(acervo.itens.map((i) => i.tipo))].sort();

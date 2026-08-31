@@ -9,6 +9,7 @@ import { Midia } from "@/ui/Midia";
 import { semORepetido } from "@/ui/texto";
 import { Recusar } from "@/ui/Recusar";
 import { lerRecusas } from "@/dados/feedback";
+import { lerContextoDaRedacao } from "@/dados/redacao";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -20,9 +21,12 @@ export const revalidate = 900;
  * O que aparece aqui é o que passou de 55 e ainda tem prazo.
  */
 export default async function Hoje() {
-  const acervo = await carregarAcervo();
-  const recusados = await lerRecusas();
-  const ctx = { hoje: acervo.hoje, recusados };
+  const [acervo, recusados, daRedacao] = await Promise.all([
+    carregarAcervo(),
+    lerRecusas(),
+    lerContextoDaRedacao(),
+  ]);
+  const ctx = { hoje: acervo.hoje, recusados, ...daRedacao };
 
   // Agrupa antes de escolher: boletim de hora em hora não pode ocupar a tela.
   // Agrupa boletim repetido, depois espalha por fonte: sem isso uma conta

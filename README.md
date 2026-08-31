@@ -116,7 +116,11 @@ docs/           arquitetura, Apify e integração com a Redação
 
 `GET /api/pauta` devolve as pautas que passaram do corte, cada uma com o
 raciocínio, o plano por canal e `midia.podePublicar` — a trava explícita no
-contrato. Detalhes em [`docs/INTEGRACAO-REDACAO.md`](docs/INTEGRACAO-REDACAO.md).
+contrato. O laço volta fechado: a Redação devolve as recusas com motivo em
+`/api/feedback` e, com `REDACAO_URL` configurada, o Cérebro lê de lá o que a
+Casa já publicou e as ações do Registrar — os dois dados que faltavam para o
+ineditismo e a ação real. Detalhes em
+[`docs/INTEGRACAO-REDACAO.md`](docs/INTEGRACAO-REDACAO.md).
 
 ## Documentação
 

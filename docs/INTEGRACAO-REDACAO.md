@@ -93,16 +93,27 @@ pauta. Simples, e os dois lados sobem independentes.
 de Next nem de Apify: dá para importar `decidir`, `planoDeCanais` e `proibicoes`
 direto. Vale quando a Redação precisar repontuar com contexto que só ela tem.
 
-## O que a Redação devolve — fase 2
+## O que a Redação devolve — fase 2 (fechada)
 
-O motor já aceita esse contexto em `ContextoDecisao`, mas ninguém preenche ainda:
+O laço de volta existe e tem duas pontas:
 
-- **`jaPublicado`** — ganchos já publicados. Sem isso `medirIneditismo` só pega
-  marcas textuais de conteúdo requentado, e o Cérebro repete o que a Casa acabou
+**A recusa com motivo.** A Redação recusa uma sugestão pela tela Cérebro dela e
+o motivo chega em `POST /api/feedback` daqui. O sinal sai de todas as leituras
+seguintes, e "repetitivo"/"já falamos" fazem o motor recuar naquela fonte.
+
+**O contexto da operação.** A Redação expõe `GET /api/cerebro/contexto` com dois
+conjuntos, ambos só de títulos, janela de 60 dias:
+
+- **`jaPublicado`** — os títulos do que foi ao ar (destinos `publicada` do hub,
+  pela data real de publicação). Alimenta `medirIneditismo`: sem isso o Cérebro
+  só pegava marca textual de conteúdo requentado e repetia o que a Casa acabou
   de postar.
-- **`acoesDaCasa`** — o "registrar": ações confirmadas da filial. É o que separa
-  "o assunto apareceu" de "a filial fez algo", e hoje quase todo sinal externo
-  fica com ação real baixa por falta desse dado.
+- **`acoesDaCasa`** — as atividades Ação e Evento do Registrar. Alimenta
+  `medirAcaoReal`: é o que separa "o assunto apareceu" de "a filial fez algo".
 
-Fechar esse laço é o maior ganho isolado disponível. Ele transforma o Cérebro de
-um filtro em algo que aprende com a operação.
+O Cérebro lê isso em `src/dados/redacao.ts` e injeta no `ContextoDecisao` de
+todas as telas e do próprio `/api/pauta`, com cache de 5 minutos. Configuração:
+`REDACAO_URL` (sem ela, nada muda — o Cérebro decide como sempre decidiu) e
+`REDACAO_CONTEXTO_TOKEN`, o mesmo segredo do `CEREBRO_CONTEXTO_TOKEN` de lá,
+necessário só se a Redação fechar a rota. Falha de rede, rota ausente ou
+resposta estranha degradam para o comportamento antigo, nunca para erro.
