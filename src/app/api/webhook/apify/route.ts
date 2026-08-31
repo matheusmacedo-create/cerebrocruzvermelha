@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "@/apify/cliente";
-import { errosParaSaude, perfisBloqueados, postsParaItens, type PostInstagram } from "@/apify/normalizar";
+import { perfisBloqueados, postsParaItens, saudeDaColeta, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
 import { chavesGuardadas, guardarMidias, podarMidia } from "@/apify/midia";
 import type { Acervo } from "@/core/tipos";
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     // `fresco`: acabamos de gravar e precisamos mesclar sobre o estado atual.
     const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
     // Perfis que falharam viram saúde de fonte visível na tela de Fontes.
-    const snapshot = montarAcervo({ novos, base, saudeColeta: errosParaSaude(posts) });
+    const snapshot = montarAcervo({ novos, base, saudeColeta: saudeDaColeta(posts) });
     await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
 
     // As URLs da CDN expiram em dias: os bytes são copiados agora, enquanto
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       lidos: posts.length,
       aceitos: novos.length,
       descartados: posts.length - novos.length,
-      falhas: errosParaSaude(posts).length,
+      falhas: saudeDaColeta(posts).filter((s) => !s.ok).length,
       total: snapshot.totais.itens,
       midia: { ...midia, podadas },
       retentando: bloqueados,

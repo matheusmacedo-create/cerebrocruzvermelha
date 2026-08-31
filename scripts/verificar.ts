@@ -3,7 +3,7 @@ import { decidir, ehSinal } from "../src/core/mente";
 import { agrupar, familia } from "../src/core/agrupar";
 import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
-import { errosParaSaude, perfisBloqueados, postsParaItens } from "../src/apify/normalizar";
+import { errosParaSaude, perfisBloqueados, postsParaItens, saudeDaColeta } from "../src/apify/normalizar";
 import { semORepetido } from "../src/ui/texto";
 import { chaveMidia } from "../src/apify/midia";
 import { CONTAS, perfisInstagram } from "../src/core/contas";
@@ -113,6 +113,18 @@ const bloq = perfisBloqueados([
   { inputUrl: "https://www.instagram.com/naoexiste", error: "not_found" },
   { id: "9", ownerUsername: "operacoesrio", caption: "ok", url: "u" },
 ]);
+// Fonte que voltou precisa desmarcar a falha: senão o painel diz que metade
+// das fontes está morta enquanto todas coletam.
+const sd = saudeDaColeta([
+  { id: "1", ownerUsername: "operacoesrio", caption: "post", url: "u" },
+  { id: "2", ownerUsername: "operacoesrio", caption: "outro", url: "u2" },
+  { inputUrl: "https://www.instagram.com/defesacivilrj", error: "no_items" },
+]);
+const okCor = sd.find((x) => x.ok && x.fonte.includes("COR-Rio"));
+checar("perfil que coletou entra como fonte no ar", Boolean(okCor) && okCor!.itens === 2, `${okCor?.itens} itens`);
+checar("perfil bloqueado entra como fonte fora", sd.some((x) => !x.ok && x.fonte.includes("Defesa Civil do Estado")));
+checar("saúde cobre sucesso e falha", sd.length === 2, `${sd.length} entradas`);
+
 checar("só perfil bloqueado entra na retentativa",
   bloq.length === 1 && bloq[0] === "defesacivilrj", bloq.join(","));
 

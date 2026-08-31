@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Direito, Item, MidiaItem, SaudeFonte } from "@/core/tipos";
-import { contaPorHandle } from "@/core/contas";
+import { CONTAS_POR_ID, contaPorHandle } from "@/core/contas";
 
 /**
  * Saída do actor apify/instagram-post-scraper.
@@ -166,6 +166,42 @@ export function errosParaSaude(posts: PostInstagram[]): SaudeFonte[] {
  *
  * Vale separar de `not_found`, que é handle errado e retentar não resolve.
  */
+/**
+ * Saúde completa da coleta: o que falhou e o que deu certo.
+ *
+ * Reportar só as falhas deixa a fonte marcada como fora do ar para sempre —
+ * o bloqueio do Instagram é intermitente, o perfil volta na run seguinte e
+ * nada desmarca a falha anterior. Em uma semana o painel diria que metade
+ * das fontes está morta enquanto todas coletam normalmente.
+ *
+ * Por isso o sucesso também é registrado: ele sobrescreve a falha antiga,
+ * porque o snapshot deduplica a saúde pelo nome da fonte.
+ */
+export function saudeDaColeta(posts: PostInstagram[]): SaudeFonte[] {
+  const porConta = new Map<string, number>();
+  for (const p of posts) {
+    if (!p.ownerUsername) continue;
+    const conta = contaPorHandle(p.ownerUsername);
+    if (!conta) continue;
+    porConta.set(conta.id, (porConta.get(conta.id) ?? 0) + 1);
+  }
+
+  const sucessos: SaudeFonte[] = [];
+  for (const [id, itens] of porConta) {
+    const conta = CONTAS_POR_ID.get(id)!;
+    sucessos.push({
+      fonte: conta.nome,
+      ok: true,
+      itens,
+      detalhe: `Coletado do Instagram (${conta.instagram}).`,
+      url: `https://instagram.com/${conta.instagram?.replace(/^@/, "")}`,
+    });
+  }
+  // A falha vem depois: se um perfil apareceu nas duas listas, o estado mais
+  // recente da mesma run é o que interessa, e o erro é o mais informativo.
+  return [...sucessos, ...errosParaSaude(posts)];
+}
+
 export function perfisBloqueados(posts: PostInstagram[]): string[] {
   const handles = new Set<string>();
   for (const p of posts) {

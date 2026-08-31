@@ -1,49 +1,58 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Libre_Franklin } from "next/font/google";
 import { carregarAcervo } from "@/dados/acervo";
-import { Abas } from "@/ui/Abas";
+import { Marca } from "@/ui/Marca";
+import { Navegacao } from "@/ui/Navegacao";
+import { Topo } from "@/ui/Topo";
 import "./globals.css";
 
+// A mesma família do Redação: os dois ambientes precisam ler como um só.
+const libreFranklin = Libre_Franklin({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-libre-franklin",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Cérebro CVRJ — notícias que merecem atenção",
+  title: "Cérebro de Notícias — Cruz Vermelha Brasileira Rio de Janeiro",
   description:
-    "Observa, entende e decide. Não publica. Cruz Vermelha Brasileira — Filial Rio de Janeiro.",
+    "Radar de notícias da Cruz Vermelha Brasileira — Rio de Janeiro. Observa, entende e decide o que merece virar pauta. Não publica.",
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const acervo = await carregarAcervo();
-  const t = acervo.totais;
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={libreFranklin.variable}>
       <body>
-        <header className="mast">
-          <div className="mast-topo">
-            <div>
-              <div className="sobrancelha">
-                Cruz Vermelha Brasileira · Filial Rio de Janeiro
-              </div>
-              <h1>Cérebro de Notícias</h1>
-              <p className="sub">
-                Das centenas de coisas observadas, <b>estas poucas merecem sua atenção</b> — e
-                estas duas devem entrar no calendário. O Cérebro não publica.
-              </p>
+        <div className="casca">
+          <aside className="lateral">
+            <div className="lateral-topo">
+              <Marca />
             </div>
-            <div className="kpis">
-              <div className="kpi"><b>{t.itens}</b><span>sinais</span></div>
-              <div className="kpi"><b>{t.alta}</b><span>relevância alta</span></div>
-              <div className="kpi"><b>{t.propostas}</b><span>peças sugeridas</span></div>
-              <div className="kpi"><b>{t.datas}</b><span>datas</span></div>
-              <div className="kpi"><b>{t.fontes_ok}/{t.fontes}</b><span>fontes no ar</span></div>
+            <Navegacao />
+            <div className="lateral-rodape">
+              Regras e cruzamento lexical sobre lista fechada. Sem modelo generativo.
+              <br />
+              Atualizado {new Date(acervo.gerado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}
             </div>
+          </aside>
+          <div className="coluna">
+            <Topo acervo={acervo} />
+            <main>
+              <div className="conteudo">{children}</div>
+            </main>
           </div>
-          <Abas />
-        </header>
-        <main>{children}</main>
-        <footer className="rodape">
-          {acervo.metodo} · coleta {acervo.hoje} · gerado{" "}
-          {new Date(acervo.gerado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} ·
-          origem <b>{acervo.origem === "apify" ? "Apify (ao vivo)" : "acervo semente do repositório"}</b>
-        </footer>
+        </div>
       </body>
     </html>
   );

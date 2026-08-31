@@ -8,7 +8,7 @@
  */
 import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "../src/apify/cliente";
 import { inputInstagram, resumoDaLista, type Cadencia } from "../src/apify/input";
-import { errosParaSaude, perfisBloqueados, postsParaItens, type PostInstagram } from "../src/apify/normalizar";
+import { perfisBloqueados, postsParaItens, saudeDaColeta, type PostInstagram } from "../src/apify/normalizar";
 import { montarAcervo } from "../src/dados/montar";
 import { chavesGuardadas, guardarMidias, podarMidia } from "../src/apify/midia";
 import type { Acervo } from "../src/core/tipos";
@@ -73,8 +73,9 @@ async function main() {
 
   const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
   // Mesma regra do webhook: perfil que falhou vira saúde de fonte visível.
-  const falhas = errosParaSaude(posts);
-  const snapshot = montarAcervo({ novos, base, saudeColeta: falhas });
+  const saudeColeta = saudeDaColeta(posts);
+  const falhas = saudeColeta.filter((s) => !s.ok);
+  const snapshot = montarAcervo({ novos, base, saudeColeta });
   for (const f of falhas) console.log(`  ! ${f.fonte}: ${f.detalhe}`);
   await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
   console.log(`Snapshot gravado: ${snapshot.totais.itens} sinais, ${snapshot.totais.alta} de relevância alta.`);
