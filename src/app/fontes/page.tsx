@@ -8,7 +8,6 @@ export const revalidate = 900;
 
 const STATUS_SELO: Record<string, { cor: string; rotulo: string; titulo: string }> = {
   confirmado: { cor: "verde", rotulo: "handle ok", titulo: "Handle confirmado contra a Apify." },
-  bloqueado: { cor: "media", rotulo: "bloqueado", titulo: "O handle existe, mas o Instagram bloqueia a coleta. Intermitente." },
   ausente: { cor: "alta", rotulo: "sem instagram", titulo: "Nenhum handle de Instagram confirmado. Fora da coleta até alguém confirmar." },
   suspeito: { cor: "alta", rotulo: "suspeito", titulo: "Handle existe mas não parece ser a conta institucional." },
 };

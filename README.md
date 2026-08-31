@@ -96,6 +96,9 @@ Elas mandam mais que a soma das notas.
 - **Handle quebrado não falha em silêncio.** Perfil que a Apify não encontra vira
   saúde de fonte visível na tela de Fontes, e conta sem handle confirmado nem
   entra na coleta. Uma fonte que some sem avisar é a falha mais cara aqui.
+- **"Sem posts na janela" não é falha.** Órgão público não publica todo dia, e
+  confundir isso com bloqueio faz o painel anunciar fontes mortas que estão no
+  ar. Só bloqueio com mensagem explícita conta como falha.
 
 ## Estrutura
 

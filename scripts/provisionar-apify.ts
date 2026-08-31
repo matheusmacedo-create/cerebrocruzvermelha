@@ -41,7 +41,7 @@ async function main() {
   const agendasExistentes = dry ? [] : (await api<{ data: { items: Nomeado[] } }>("/schedules?limit=1000")).data.items;
 
   const lotes = todosOsLotes();
-  console.log(`${lotes.length} runs por ciclo, espalhadas pelo dia. Menos runs por janela = menos bloqueio do Instagram.\n`);
+  console.log(`${lotes.length} runs por ciclo, espalhadas pelo dia.\n`);
 
   for (const lote of lotes) {
     const { nome, input, cron, descricao } = lote;

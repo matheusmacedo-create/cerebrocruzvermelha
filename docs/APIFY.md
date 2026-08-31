@@ -116,65 +116,55 @@ com um assistente para rodar.
 
 ## Estado dos handles do Instagram
 
-Conferido contra a Apify em 31/08/2026 com `npm run handles`. Dos 23 handles da
-lista original, **7 não existiam** e um redirecionava para outra organização —
+Conferido contra a Apify com `npm run handles`. Dos 23 handles da lista
+original, **9 não serviam dados** e um redirecionava para outra organização —
 o pior caso, porque atribuiria conteúdo alheio à fonte errada.
 
-| Conta | Handle na lista | Achado |
+| Conta | Na lista | Correto |
 |---|---|---|
-| Defesa Civil Municipal | `@defesacivilrio` | não existe → **`@defesacivil_rio`** |
-| MetrôRio | `@metroriooficial` | não existe → **`@metro_rio`** |
-| Maré de Notícias | `@maredenoticias` | redireciona para `@vozdascomunidades` → **`@redesdamare`**, a organização que publica o jornal |
-| INEA | `@ineagovrj` | não existe, sem substituto confirmado |
-| Fogo Cruzado | `@fogocruzadorj` | não existe, sem substituto confirmado |
-| OTT | `@ott_rio` | não existe, sem substituto confirmado |
-| SuperVia | `@supervia_trens` | não existe, sem substituto confirmado |
-| CCR Barcas | `@ccrbarcas` | não existe; `@ccr_barcas` existe mas não parece institucional |
+| Defesa Civil do Estado (SEDEC-RJ) | `@defesacivilrj` | **`@defesacivil_rj`** |
+| Corpo de Bombeiros (CBMERJ) | `@cbmerj` | **`@corpodebombeiros_rj`** |
+| Defesa Civil Municipal | `@defesacivilrio` | **`@defesacivil_rio`** |
+| MetrôRio | `@metroriooficial` | **`@metro_rio`** |
+| Maré de Notícias | `@maredenoticias` | **`@redesdamare`** (redirecionava para `@vozdascomunidades`) |
+| INEA, Fogo Cruzado, OTT, SuperVia, CCR Barcas | — | sem substituto confirmado |
 
-As cinco sem substituto ficam com `instagramStatus: "ausente"` e **não entram na
-coleta** — pedir handle inexistente gasta run e faz a fonte sumir sem avisar.
-Elas seguem na lista pelo X, que é a fase 2.
+As cinco sem substituto ficam com `instagramStatus: "ausente"` e não entram na
+coleta — pedir handle inexistente gasta run e faz a fonte sumir sem avisar.
 
-`@defesacivilrj`, `@fiocruz` e `@falaroca` existem mas o Instagram bloqueia o
-scraper de forma intermitente (`no_items` com *"Request got blocked"*). Continuam
-sendo pedidas; o bloqueio passa.
+## O que "vazio" quer dizer
 
-Reconfira quando a coleta trouxer menos do que devia:
+O actor devolve um registro por perfil que não rendeu posts, e são três coisas
+diferentes. Confundi-las custa caro:
 
-```bash
-npm run handles                       # a lista inteira
-npm run handles -- metro_rio inea_rj  # só estes
-```
+| Registro | Significa | O que fazer |
+|---|---|---|
+| `not_found` | O handle não existe | Corrigir a lista |
+| `no_items` **com** `requestErrorMessages` de bloqueio | O Instagram recusou a sessão | Nada; é intermitente e a run seguinte passa |
+| `no_items` **sem** mensagem | A conta não postou dentro da janela | Nada; não é falha |
 
-Uma run por handle, porque em lote o actor omite o `inputUrl` nos registros de
-`not_found` e não dá para saber qual falhou. Handle inexistente não gera post
-cobrável, então conferir custa quase nada.
+O terceiro caso é o comum, e por muito tempo foi lido aqui como bloqueio. É
+errado: medido, `@hemorio` voltou vazio numa janela de 2 dias porque seu último
+post era de 2 dias atrás, e numa janela de 30 dias trouxe 3 posts sem nenhum
+bloqueio registrado. Órgão público não publica todo dia.
 
-## Mídia
+Por isso as janelas são largas — 2, 7, 14 e 30 dias — bem além do intervalo
+entre as runs. A deduplicação por id impede que a janela larga traga o mesmo
+post duas vezes, e o teto por perfil segura o custo. **Janela larga custa
+pouco; janela apertada custa fonte.**
 
-As URLs da CDN do Instagram são **assinadas e expiram em cerca de 4 dias**.
-Apontar o app direto para elas faria a mídia aparecer na coleta e morrer depois —
-o Jornal viraria uma parede de imagens quebradas justamente quando alguém volta
-para revisar uma decisão antiga.
+Só um perfil com mensagem de bloqueio explícita entra na retentativa. Retentar
+quem simplesmente não postou gastaria run à toa.
 
-Então a coleta copia a **capa** de cada post para o Key-Value Store, e o app a
-serve por `/api/midia/[id]`, com cache imutável: os bytes de um id nunca mudam.
-Se a capa não estiver no store, a rota busca na fonte uma vez e guarda; se a URL
-já expirou, devolve 404 e o cartão mostra a marcação em vez de uma imagem
-quebrada.
+## Como a coleta vai de fato
 
-Só a capa. Vídeo de reels tem megabytes e o Cérebro não é arquivo de vídeo — o
-cartão leva para a fonte, com o play em cima da capa.
+`GET /api/saude` traz a taxa das últimas 20 coletas: quantos perfis foram
+pedidos e quantos responderam. É o número que diz se vale mudar cadência ou
+trocar de actor — não a impressão de uma run isolada.
 
-Isto é cache de exibição para a triagem interna e **não muda nada sobre direito
-de imagem**: o que não é `autorizado` continua sem poder entrar numa peça da
-filial, e o selo de direito fica sobre a própria imagem para que quem bate o
-olho saiba disso antes de querer usar.
-
-O acervo guarda no máximo **400 sinais de rede social** (`TETO_ITENS_REDE`),
-os mais recentes. Sem esse teto o acervo mesclaria para sempre e o store cresceria
-junto — a coleta roda de 6 em 6 horas. A mídia de item que saiu do acervo é
-apagada na coleta seguinte.
+Medido em 31/08/2026, em runs espaçadas: 15 de 16, 18 de 19, 18 de 19, 10 de 11
+perfis responderam. A coleta vai bem. As quedas que apareceram nos testes desse
+dia eram handles errados e janelas apertadas, não bloqueio.
 
 ## Custo medido
 

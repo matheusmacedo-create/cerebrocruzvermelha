@@ -26,6 +26,7 @@ export interface PostInstagram {
   error?: string;
   errorDescription?: string;
   inputUrl?: string;
+  requestErrorMessages?: string[];
 }
 
 /** Id estável: o mesmo post coletado duas vezes não vira dois sinais. */
@@ -134,38 +135,49 @@ export function postParaItem(p: PostInstagram): Item | null {
  * posts. Sem ler esses registros, um handle quebrado some da coleta em
  * silêncio — a fonte para de aparecer e ninguém percebe.
  *
- * `not_found` é handle errado e pede correção na lista.
- * `no_items` costuma ser bloqueio do Instagram, intermitente: espera e volta.
+ * São três coisas diferentes, e confundi-las custa caro:
+ *
+ * - `not_found` — o handle não existe. Pede correção na lista.
+ * - `no_items` COM mensagem de bloqueio — o Instagram recusou a sessão nesta
+ *   run. Intermitente; a próxima costuma passar.
+ * - `no_items` SEM mensagem — o caso comum, e não é falha: a conta não
+ *   publicou dentro da janela pedida. Medido: @hemorio voltou "vazio" numa
+ *   janela de 2 dias porque seu último post era de 2 dias atrás; numa janela
+ *   de 30 dias trouxe 3 posts, sem nenhum bloqueio registrado.
+ *
+ * Tratar todo `no_items` como bloqueio faz o painel anunciar que metade das
+ * fontes está morta quando elas apenas não postaram hoje.
  */
+function classificar(p: PostInstagram): "inexistente" | "bloqueado" | "sem_posts" {
+  if (p.error === "not_found") return "inexistente";
+  const recusado = (p.requestErrorMessages ?? []).some((m) => /blocked|forbidden|rate limit/i.test(m));
+  return recusado ? "bloqueado" : "sem_posts";
+}
+
 export function errosParaSaude(posts: PostInstagram[]): SaudeFonte[] {
   const saude: SaudeFonte[] = [];
   for (const p of posts) {
     if (!p.error) continue;
     const handle = (p.inputUrl ?? p.url ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, "");
     const conta = handle ? contaPorHandle(handle) : undefined;
-    const bloqueio = p.error === "no_items";
+    const tipo = classificar(p);
     saude.push({
       fonte: conta?.nome ?? `Instagram @${handle || "?"}`,
-      ok: false,
+      // Não ter postado na janela não é a fonte estar fora do ar.
+      ok: tipo === "sem_posts",
       itens: 0,
-      detalhe: bloqueio
-        ? `Instagram bloqueou a coleta (${p.error}). O handle existe; o bloqueio é intermitente e a próxima run costuma passar.`
-        : `Handle não encontrado (${p.error}). Corrigir em src/core/contas.ts — enquanto isso esta fonte não é coletada.`,
+      detalhe:
+        tipo === "inexistente"
+          ? "Handle não encontrado. Corrigir em src/core/contas.ts — enquanto isso esta fonte não é coletada."
+          : tipo === "bloqueado"
+            ? "O Instagram recusou a sessão nesta run. É intermitente; a próxima costuma passar."
+            : "Sem publicações novas na janela desta cadência. A conta está no ar; só não postou.",
       url: handle ? `https://instagram.com/${handle}` : "",
     });
   }
   return saude;
 }
 
-/**
- * Perfis que o Instagram bloqueou nesta run.
- *
- * `no_items` quase sempre é bloqueio, não conta vazia: o actor registra
- * "Request got blocked" e desiste. O bloqueio é por sessão e intermitente —
- * o mesmo perfil que falha agora costuma passar na tentativa seguinte.
- *
- * Vale separar de `not_found`, que é handle errado e retentar não resolve.
- */
 /**
  * Saúde completa da coleta: o que falhou e o que deu certo.
  *
@@ -197,15 +209,22 @@ export function saudeDaColeta(posts: PostInstagram[]): SaudeFonte[] {
       url: `https://instagram.com/${conta.instagram?.replace(/^@/, "")}`,
     });
   }
-  // A falha vem depois: se um perfil apareceu nas duas listas, o estado mais
-  // recente da mesma run é o que interessa, e o erro é o mais informativo.
+  // O registro de erro vem depois: se o perfil aparece nas duas listas, o
+  // detalhe do erro é mais informativo que "coletado".
   return [...sucessos, ...errosParaSaude(posts)];
 }
 
+/**
+ * Perfis que o Instagram realmente recusou nesta run.
+ *
+ * Só entra quem trouxe mensagem de bloqueio. Retentar um perfil que
+ * simplesmente não postou na janela gasta run à toa: ele volta vazio de
+ * novo, pela mesma razão.
+ */
 export function perfisBloqueados(posts: PostInstagram[]): string[] {
   const handles = new Set<string>();
   for (const p of posts) {
-    if (p.error !== "no_items") continue;
+    if (!p.error || classificar(p) !== "bloqueado") continue;
     const h = (p.inputUrl ?? p.url ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, "");
     if (h) handles.add(h);
   }

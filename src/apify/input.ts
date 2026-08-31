@@ -15,15 +15,21 @@ import type { Conta } from "@/core/tipos";
  * serve: o input fica guardado dentro da Task agendada na Apify e uma data
  * fixa envelhece — em uma semana a task estaria pedindo a semana errada.
  *
- * A janela é mais larga que o intervalo entre as runs de propósito. Se uma
- * run falhar, a seguinte ainda alcança o que a anterior perdeu, e a
- * deduplicação por id impede que o mesmo post entre duas vezes.
+ * A janela é bem mais larga que o intervalo entre as runs, e isso importa
+ * mais do que parecia. Uma janela apertada faz o actor devolver "vazio" para
+ * uma conta perfeitamente saudável que só não postou hoje — medido: @hemorio
+ * voltou vazio numa janela de 2 dias porque seu último post era de 2 dias
+ * atrás, e numa de 30 dias trouxe 3 posts. Órgão público não publica todo dia.
+ *
+ * A deduplicação por id impede que a janela larga traga o mesmo post de novo,
+ * e o teto por perfil segura o custo. Então larga custa pouco e apertada custa
+ * fonte.
  */
 export const JANELA: Record<Conta["cadencia"], { rotulo: string; apify: string }> = {
-  tempo_real: { rotulo: "1 dia", apify: "1 days" },
-  diario: { rotulo: "2 dias", apify: "2 days" },
-  "3_dias": { rotulo: "4 dias", apify: "4 days" },
-  "10_dias": { rotulo: "11 dias", apify: "11 days" },
+  tempo_real: { rotulo: "2 dias", apify: "2 days" },
+  diario: { rotulo: "7 dias", apify: "7 days" },
+  "3_dias": { rotulo: "14 dias", apify: "14 days" },
+  "10_dias": { rotulo: "30 dias", apify: "30 days" },
 };
 
 export type Cadencia = Conta["cadencia"];

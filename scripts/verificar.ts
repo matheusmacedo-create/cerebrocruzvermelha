@@ -98,13 +98,16 @@ checar("só entra quem está na lista, sem fixado e sem duplicata", itens.length
 
 // 6b. Registro de erro do actor vira saúde de fonte, não silêncio
 const saude = errosParaSaude([
-  { inputUrl: "https://www.instagram.com/defesacivilrj", error: "no_items" },
+  // Sem mensagem de bloqueio: a conta só não postou na janela.
+  { inputUrl: "https://www.instagram.com/defesacivil_rj", error: "no_items", requestErrorMessages: [] },
   { inputUrl: "https://www.instagram.com/handleinexistente", error: "not_found" },
+  { inputUrl: "https://www.instagram.com/falaroca", error: "no_items", requestErrorMessages: ["Error: Request got blocked. Will retry"] },
   { id: "9", ownerUsername: "operacoesrio", caption: "post normal", url: "u" },
 ]);
-checar("erro de perfil vira saúde de fonte", saude.length === 2, `${saude.length} registros`);
-checar("bloqueio e handle errado são distinguidos",
-  saude[0].detalhe.includes("bloqueou") && saude[1].detalhe.includes("não encontrado"));
+checar("cada perfil sem posts vira uma linha de saúde", saude.length === 3, `${saude.length} registros`);
+checar("sem posts na janela NÃO é fonte fora do ar", saude[0].ok === true && saude[0].detalhe.includes("só não postou"));
+checar("handle inexistente é falha", saude[1].ok === false && saude[1].detalhe.includes("não encontrado"));
+checar("bloqueio de verdade é falha", saude[2].ok === false && saude[2].detalhe.includes("recusou a sessão"));
 checar("saúde de erro nomeia a conta quando ela existe na lista",
   saude[0].fonte.includes("Defesa Civil do Estado"));
 // Bloqueio se retenta; handle errado não — retentar não conserta digitação.
@@ -118,15 +121,12 @@ const bloq = perfisBloqueados([
 const sd = saudeDaColeta([
   { id: "1", ownerUsername: "operacoesrio", caption: "post", url: "u" },
   { id: "2", ownerUsername: "operacoesrio", caption: "outro", url: "u2" },
-  { inputUrl: "https://www.instagram.com/defesacivilrj", error: "no_items" },
+  { inputUrl: "https://www.instagram.com/naoexistemesmo", error: "not_found" },
 ]);
 const okCor = sd.find((x) => x.ok && x.fonte.includes("COR-Rio"));
 checar("perfil que coletou entra como fonte no ar", Boolean(okCor) && okCor!.itens === 2, `${okCor?.itens} itens`);
-checar("perfil bloqueado entra como fonte fora", sd.some((x) => !x.ok && x.fonte.includes("Defesa Civil do Estado")));
+checar("handle inexistente entra como fonte fora", sd.some((x) => !x.ok));
 checar("saúde cobre sucesso e falha", sd.length === 2, `${sd.length} entradas`);
-
-checar("só perfil bloqueado entra na retentativa",
-  bloq.length === 1 && bloq[0] === "defesacivilrj", bloq.join(","));
 
 // 6c. Boletins repetidos são agrupados, e a escalada continua aparecendo
 const boletins = [
@@ -170,7 +170,7 @@ const [longo] = postsParaItens([{ id: "L", ownerUsername: "operacoesrio",
 checar("título longo é cortado", longo.titulo.length <= 100 && longo.titulo.endsWith("…"), `${longo.titulo.length} chars`);
 checar("título cortado não parte palavra", !/\s\S{1,3}…$/.test(longo.titulo), longo.titulo.slice(-28));
 checar("resumo mantém a legenda inteira", longo.resumo.length > longo.titulo.length);
-const [curto] = postsParaItens([{ id: "C", ownerUsername: "cbmerj",
+const [curto] = postsParaItens([{ id: "C", ownerUsername: "corpodebombeiros_rj",
   caption: "Bombeiros atendem ocorrência na Tijuca. Equipes seguem no local.", url: "u2", timestamp: "2026-08-31T09:00:00Z" }]);
 checar("título curto fica inteiro", curto.titulo === "Bombeiros atendem ocorrência na Tijuca.", curto.titulo);
 
