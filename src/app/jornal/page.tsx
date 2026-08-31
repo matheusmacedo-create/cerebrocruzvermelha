@@ -2,6 +2,7 @@ import Link from "next/link";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { CATEGORIAS, resolverConta } from "@/core/contas";
 import { CartaoJornal } from "@/ui/CartaoJornal";
+import { agrupar } from "@/core/agrupar";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -19,7 +20,7 @@ export default async function Jornal({ searchParams }: { searchParams: Promise<B
   const acervo = await carregarAcervo();
   const ctx = { hoje: acervo.hoje };
 
-  let pontuados = pontuar(acervo.itens, ctx);
+  let pontuados = agrupar(pontuar(acervo.itens, ctx));
   if (categoria) {
     pontuados = pontuados.filter((p) => {
       const c = resolverConta(p.item);
@@ -69,8 +70,8 @@ export default async function Jornal({ searchParams }: { searchParams: Promise<B
         </div>
       ) : (
         <div className="lista" style={{ gap: 14 }}>
-          {mostrar.map(({ item, score }) => (
-            <CartaoJornal key={item.id} item={item} score={score} />
+          {mostrar.map(({ item, score, semelhantes }) => (
+            <CartaoJornal key={item.id} item={item} score={score} semelhantes={semelhantes} />
           ))}
         </div>
       )}

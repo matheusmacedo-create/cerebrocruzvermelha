@@ -1,10 +1,17 @@
 import { carregarAcervo } from "@/dados/acervo";
-import { CATEGORIAS, CONTAS, SOMENTE_INTERNO } from "@/core/contas";
+import { CATEGORIAS, CONTAS, SOMENTE_INTERNO, contasSemInstagram } from "@/core/contas";
 import { JANELA_HORAS } from "@/apify/input";
 import type { Conta } from "@/core/tipos";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
+
+const STATUS_SELO: Record<string, { cor: string; rotulo: string; titulo: string }> = {
+  confirmado: { cor: "verde", rotulo: "handle ok", titulo: "Handle confirmado contra a Apify." },
+  bloqueado: { cor: "media", rotulo: "bloqueado", titulo: "O handle existe, mas o Instagram bloqueia a coleta. Intermitente." },
+  ausente: { cor: "alta", rotulo: "sem instagram", titulo: "Nenhum handle de Instagram confirmado. Fora da coleta até alguém confirmar." },
+  suspeito: { cor: "alta", rotulo: "suspeito", titulo: "Handle existe mas não parece ser a conta institucional." },
+};
 
 const CADENCIA_ROTULO: Record<Conta["cadencia"], string> = {
   tempo_real: "tempo real",
@@ -36,6 +43,17 @@ export default async function Fontes() {
           <br />
           Entrar e sair desta lista é decisão humana, feita no código e revisada. A cadência governa
           o custo da coleta na Apify.
+          {contasSemInstagram().length > 0 && (
+            <>
+              {" "}
+              <b>
+                {contasSemInstagram().length} contas estão fora da coleta do Instagram por falta de
+                handle confirmado
+              </b>{" "}
+              — elas seguem na lista pelo X, que é a fase 2. Um handle quebrado que ninguém vê é a
+              falha mais cara aqui: a fonte some sem avisar.
+            </>
+          )}
         </div>
       </div>
 
@@ -56,6 +74,14 @@ export default async function Fontes() {
                     {CADENCIA_ROTULO[c.cadencia]}
                   </span>
                   {SOMENTE_INTERNO.has(c.id) && <span className="selo escuro">uso interno</span>}
+                  {c.instagramStatus && (
+                    <span
+                      className={`selo ${STATUS_SELO[c.instagramStatus].cor}`}
+                      title={STATUS_SELO[c.instagramStatus].titulo}
+                    >
+                      {STATUS_SELO[c.instagramStatus].rotulo}
+                    </span>
+                  )}
                 </div>
                 <h3 style={{ marginTop: 8 }}>{c.nome}</h3>
                 <p className="mini muted" style={{ margin: "4px 0" }}>

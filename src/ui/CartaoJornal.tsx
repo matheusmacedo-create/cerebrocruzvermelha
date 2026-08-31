@@ -13,7 +13,7 @@ import { Barras } from "./Barras";
  * bem visível — e o plano por canal logo abaixo. A mídia de terceiro
  * aparece aqui e para aqui: ela não segue para a peça.
  */
-export function CartaoJornal({ item, score }: { item: Item; score: Score }) {
+export function CartaoJornal({ item, score, semelhantes = 0 }: { item: Item; score: Score; semelhantes?: number }) {
   const d = direitoDe(item);
   const conta = resolverConta(item);
   const canais = planoDeCanais(item, score);
@@ -30,6 +30,11 @@ export function CartaoJornal({ item, score }: { item: Item; score: Score }) {
             {d}
           </span>
           {item.midia && <span className="selo escuro">{item.midia.formato}</span>}
+          {semelhantes > 0 && (
+            <span className="selo azul" title="Boletins semelhantes desta conta, agrupados. Este é o de maior nota.">
+              +{semelhantes} agrupados
+            </span>
+          )}
         </div>
         <span className="muted mini">
           {conta?.instagram ?? item.fonte} · {score.total}/100

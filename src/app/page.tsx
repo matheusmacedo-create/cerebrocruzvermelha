@@ -2,6 +2,7 @@ import Link from "next/link";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { MODO_ROTULO } from "@/core/mente";
 import { CONTAS } from "@/core/contas";
+import { agrupar } from "@/core/agrupar";
 import { corDoModo, faixaDeAtencao } from "@/ui/selos";
 import { Barras } from "@/ui/Barras";
 
@@ -18,7 +19,8 @@ export default async function Hoje() {
   const acervo = await carregarAcervo();
   const ctx = { hoje: acervo.hoje };
 
-  const pontuados = pontuar(acervo.itens, ctx);
+  // Agrupa antes de escolher: boletim de hora em hora não pode ocupar a tela.
+  const pontuados = agrupar(pontuar(acervo.itens, ctx));
   const atencao = pontuados
     .filter((p) => p.score.modo === "agir_agora" || p.score.modo === "produzir" || p.score.modo === "agendar")
     .slice(0, 6);
@@ -28,7 +30,8 @@ export default async function Hoje() {
     .sort((a, b) => a.dias - b.dias)
     .slice(0, 5);
 
-  const escondidos = pontuados.length - atencao.length;
+  const escondidos = acervo.itens.length - atencao.length;
+  const recolhidos = pontuados.reduce((n, p) => n + p.semelhantes, 0);
   const emTempoReal = CONTAS.filter((c) => c.cadencia === "tempo_real").length;
 
   return (
@@ -40,7 +43,8 @@ export default async function Hoje() {
           <br />
           O Cérebro leu {acervo.totais.itens} sinais de {CONTAS.length} contas da lista fechada
           {emTempoReal > 0 ? ` (${emTempoReal} delas em tempo real)` : ""} e guardou {escondidos} no
-          acervo. Estes {atencao.length} pedem decisão.
+          acervo{recolhidos > 0 ? `, agrupando ${recolhidos} boletins repetidos` : ""}. Estes{" "}
+          {atencao.length} pedem decisão.
         </div>
       </div>
 
@@ -62,12 +66,13 @@ export default async function Hoje() {
         </div>
       ) : (
         <div className="grade g2">
-          {atencao.map(({ item, score }) => (
+          {atencao.map(({ item, score, semelhantes }) => (
             <article className={`card atencao ${faixaDeAtencao(score.total)}`} key={item.id}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                 <span className={`selo ${corDoModo(score.modo)}`}>{MODO_ROTULO[score.modo]}</span>
                 <span className="muted mini">
                   {item.fonte} · {score.total}/100
+                  {semelhantes > 0 ? ` · +${semelhantes} semelhantes` : ""}
                 </span>
               </div>
               <h2 style={{ marginTop: 8 }}>{item.titulo}</h2>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, temToken } from "@/apify/cliente";
-import { postsParaItens, type PostInstagram } from "@/apify/normalizar";
+import { errosParaSaude, postsParaItens, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
 import type { Acervo } from "@/core/tipos";
 
@@ -48,8 +48,10 @@ export async function POST(req: Request) {
     // Posts de contas fora da lista fechada são descartados aqui.
     const novos = postsParaItens(posts);
 
-    const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO)) ?? undefined;
-    const snapshot = montarAcervo({ novos, base });
+    // `fresco`: acabamos de gravar e precisamos mesclar sobre o estado atual.
+    const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
+    // Perfis que falharam viram saúde de fonte visível na tela de Fontes.
+    const snapshot = montarAcervo({ novos, base, saudeColeta: errosParaSaude(posts) });
     await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
 
     for (const p of ["/", "/jornal", "/acervo", "/calendario", "/fontes"]) revalidatePath(p);
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
       lidos: posts.length,
       aceitos: novos.length,
       descartados: posts.length - novos.length,
+      falhas: errosParaSaude(posts).length,
       total: snapshot.totais.itens,
     });
   } catch (e) {

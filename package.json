@@ -9,8 +9,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "coleta": "tsx scripts/coleta.ts",
-    "coleta:dry": "tsx scripts/coleta.ts --dry"
+    "coleta": "tsx --env-file-if-exists=.env.local scripts/coleta.ts",
+    "coleta:dry": "tsx --env-file-if-exists=.env.local scripts/coleta.ts --dry",
+    "handles": "tsx --env-file-if-exists=.env.local scripts/verificar-handles.ts",
+    "verificar": "tsx scripts/verificar.ts"
   },
   "dependencies": {
     "next": "^16.3.3",

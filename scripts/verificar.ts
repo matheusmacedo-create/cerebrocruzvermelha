@@ -1,8 +1,9 @@
 /** Confere o motor de decisão contra casos concretos e contra o acervo real. */
 import { decidir, ehSinal } from "../src/core/mente";
+import { agrupar, familia } from "../src/core/agrupar";
 import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
-import { postsParaItens } from "../src/apify/normalizar";
+import { errosParaSaude, postsParaItens } from "../src/apify/normalizar";
 import { CONTAS, perfisInstagram } from "../src/core/contas";
 import { inputInstagram } from "../src/apify/input";
 import type { Item } from "../src/core/tipos";
@@ -93,9 +94,65 @@ const itens = postsParaItens([
 ]);
 checar("só entra quem está na lista, sem fixado e sem duplicata", itens.length === 1 && itens[0].contaId === "cor-rio", `${itens.length} itens`);
 
+// 6b. Registro de erro do actor vira saúde de fonte, não silêncio
+const saude = errosParaSaude([
+  { inputUrl: "https://www.instagram.com/defesacivilrj", error: "no_items" },
+  { inputUrl: "https://www.instagram.com/handleinexistente", error: "not_found" },
+  { id: "9", ownerUsername: "operacoesrio", caption: "post normal", url: "u" },
+]);
+checar("erro de perfil vira saúde de fonte", saude.length === 2, `${saude.length} registros`);
+checar("bloqueio e handle errado são distinguidos",
+  saude[0].detalhe.includes("bloqueou") && saude[1].detalhe.includes("não encontrado"));
+checar("saúde de erro nomeia a conta quando ela existe na lista",
+  saude[0].fonte.includes("Defesa Civil do Estado"));
+
+// 6c. Boletins repetidos são agrupados, e a escalada continua aparecendo
+const boletins = [
+  { t: "TEMPO AGORA | CHUVA FRACA NO RIO (31/8/2026 - 04h20)", u: "Chuva fraca, sem risco." },
+  { t: "TEMPO AGORA | CHUVA MODERADA NA SAÚDE (30/8/2026 - 23h20)", u: "Chuva moderada." },
+  { t: "TEMPO AGORA | ESTÁGIO DE MOBILIZAÇÃO NO RIO (31/8/2026 - 06h)", u: "Emergência: chuva forte, risco de deslizamento e alagamento no Rio de Janeiro. Evacuação preventiva." },
+].map((b, i) => base({ id: "b" + i, contaId: "cor-rio", fonte: "COR-Rio", titulo: b.t, resumo: b.u, quando: new Date().toISOString() }));
+
+checar("boletins da mesma família compartilham assinatura",
+  new Set(boletins.map((b) => familia(b))).size === 1, String(familia(boletins[0])));
+// Aviso em caixa alta com números no meio é o mesmo gabarito.
+const previsoes = [
+  "SEGUNDA-FEIRA (31/8) COM POSSIBILIDADE DE PANCADAS DE CHUVA E VENTOS MODERADOS (31/08 - 11h21)",
+  "SEGUNDA-FEIRA (31/8) COM PREVISÃO DE CHUVA FRACA A MODERADA | VENTOS PODEM SER COM RAJADAS",
+  "SEGUNDA-FEIRA (31/8) COM PREVISÃO DE CHUVA FRACA ISOLADA DURANTE A MADRUGADA | VENTOS",
+].map((t, i) => base({ id: "p" + i, contaId: "cor-rio", fonte: "COR-Rio", titulo: t, resumo: "previsão", quando: new Date().toISOString() }));
+checar("avisos do mesmo gabarito agrupam mesmo sem o mesmo pipe",
+  new Set(previsoes.map(familia)).size === 1, String(familia(previsoes[0])));
+// Notícia em caixa normal NUNCA agrupa: esconder fato é pior que repetir boletim.
+const noticias = [
+  "Defesa Civil RJ realiza simulado para restabelecimento de comunicações críticas",
+  "Defesa Civil RJ recebe representantes da Defesa Civil Nacional para agenda de inovação",
+].map((t, i) => base({ id: "n" + i, contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)", titulo: t, resumo: "x".repeat(50), quando: new Date().toISOString() }));
+checar("notícia em caixa normal não é agrupada", noticias.every((n) => familia(n) === null));
+checar("duas notícias distintas seguem sendo duas",
+  agrupar(noticias.map((i) => ({ item: i, score: decidir(i, ctx) }))).length === 2);
+const grupos = agrupar(boletins.map((i) => ({ item: i, score: decidir(i, ctx) })));
+checar("três boletins viram um item", grupos.length === 1, `${grupos.length} grupos`);
+checar("dois foram recolhidos", grupos[0].semelhantes === 2);
+checar("o boletim mais grave representa o grupo",
+  grupos[0].item.titulo.includes("ESTÁGIO DE MOBILIZAÇÃO"), grupos[0].item.titulo.slice(0, 40));
+checar("o agrupamento é explicado na decisão",
+  grupos[0].score.porque.some((x) => x.includes("agrupa")));
+const soltos = agrupar([{ item: base({ id: "s", contaId: "cvrj", fonte: "Cruz Vermelha RJ", titulo: "Filial abre turma nova de primeiros socorros na Escola do Rio", resumo: "x".repeat(50), quando: new Date().toISOString() }), score: decidir(base({}), ctx) }]);
+checar("item único não é alterado pelo agrupamento", soltos.length === 1 && soltos[0].semelhantes === 0);
+
 // 7. Input da Apify sai da lista, não da mão
 const inp = inputInstagram("tempo_real");
-checar("input tempo real tem perfis", inp.username.length >= 5, `${inp.username.length} perfis`);
+checar("input tempo real tem perfis", inp.username.length > 0, `${inp.username.length} perfis`);
+// Pedir handle inexistente gasta run e some da coleta em silêncio.
+const semConfirmacao = CONTAS.filter((c) => c.instagramStatus === "ausente" || c.instagramStatus === "suspeito");
+checar(
+  "handle sem confirmação nunca entra no input",
+  semConfirmacao.every((c) => !c.instagram || !perfisInstagram().includes(c.instagram.replace(/^@/, ""))),
+  `${semConfirmacao.length} contas fora da coleta`,
+);
+checar("toda conta com Instagram declara o estado do handle",
+  CONTAS.filter((c) => c.instagram).every((c) => Boolean(c.instagramStatus)));
 checar("input filtra por data", Boolean(inp.onlyPostsNewerThan));
 checar("input pula fixados", inp.skipPinnedPosts === true);
 checar("todo perfil do input está na lista", inp.username.every((u) => perfisInstagram().includes(u)));

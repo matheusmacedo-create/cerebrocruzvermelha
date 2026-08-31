@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Direito, Item, MidiaItem } from "@/core/tipos";
+import type { Direito, Item, MidiaItem, SaudeFonte } from "@/core/tipos";
 import { contaPorHandle } from "@/core/contas";
 
 /**
@@ -22,6 +22,10 @@ export interface PostInstagram {
   commentsCount?: number;
   videoViewCount?: number;
   isPinned?: boolean;
+  /** Presente só nos registros de erro que o actor mistura aos posts. */
+  error?: string;
+  errorDescription?: string;
+  inputUrl?: string;
 }
 
 /** Id estável: o mesmo post coletado duas vezes não vira dois sinais. */
@@ -106,6 +110,34 @@ export function postParaItem(p: PostInstagram): Item | null {
       visualizacoes: p.videoViewCount,
     },
   };
+}
+
+/**
+ * O actor devolve um registro de erro por perfil que falhou, misturado aos
+ * posts. Sem ler esses registros, um handle quebrado some da coleta em
+ * silêncio — a fonte para de aparecer e ninguém percebe.
+ *
+ * `not_found` é handle errado e pede correção na lista.
+ * `no_items` costuma ser bloqueio do Instagram, intermitente: espera e volta.
+ */
+export function errosParaSaude(posts: PostInstagram[]): SaudeFonte[] {
+  const saude: SaudeFonte[] = [];
+  for (const p of posts) {
+    if (!p.error) continue;
+    const handle = (p.inputUrl ?? p.url ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, "");
+    const conta = handle ? contaPorHandle(handle) : undefined;
+    const bloqueio = p.error === "no_items";
+    saude.push({
+      fonte: conta?.nome ?? `Instagram @${handle || "?"}`,
+      ok: false,
+      itens: 0,
+      detalhe: bloqueio
+        ? `Instagram bloqueou a coleta (${p.error}). O handle existe; o bloqueio é intermitente e a próxima run costuma passar.`
+        : `Handle não encontrado (${p.error}). Corrigir em src/core/contas.ts — enquanto isso esta fonte não é coletada.`,
+      url: handle ? `https://instagram.com/${handle}` : "",
+    });
+  }
+  return saude;
 }
 
 export function postsParaItens(posts: PostInstagram[]): Item[] {

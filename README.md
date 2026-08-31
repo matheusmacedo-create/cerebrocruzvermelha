@@ -25,7 +25,9 @@ Construído separado, para depois integrar à Redação pelo contrato em
 npm install
 npm run dev            # http://localhost:3000
 npm run build          # build de produção
-npx tsx scripts/verificar.ts   # 23 checagens do motor sobre dados reais
+npm run verificar      # checagens do motor sobre dados reais
+npm run coleta:dry     # mostra o que iria para a Apify, sem gastar
+npm run handles        # confere a lista fechada contra a Apify
 ```
 
 Sem `APIFY_TOKEN` o Cérebro abre no **acervo semente** do repositório — a coleta
@@ -52,10 +54,20 @@ real de 30/08/2026, com 263 sinais, 29 peças e 52 datas. Ele nunca abre vazio.
 | Já falamos disso? | 8% | Gancho repetido gasta audiência. |
 | Fonte confiável? | 10% | Monitor não verificado não sustenta peça pública. |
 
-Antes de tudo isso há uma trava estrutural: **página não é sinal**. Item sem data
+Antes das perguntas vêm duas travas estruturais.
+
+**Página não é sinal.** Item sem data
 e sem corpo é catálogo de site raspado junto com a notícia — vai para o acervo e
 nunca disputa atenção. Sem ela o Cérebro promove "ônibus de vacinação de 2021" a
 pauta de hoje, que é exatamente a armadilha que ele existe para evitar.
+
+**O Cérebro agrupa.** O COR-Rio publica "TEMPO AGORA | ..." de hora em hora.
+Cada boletim pontua igual e, sozinhos, ocupam a tela de atenção inteira. Boletins
+da mesma conta e do mesmo gabarito viram um item só, representado pelo de maior
+nota — então uma escalada de estágio continua aparecendo. A distinção é
+tipográfica e confiável: boletim gritado em caixa alta é gabarito, notícia em
+caixa normal não é. Agrupar notícia distinta esconderia fato, que é pior que
+repetir boletim.
 
 ## As travas duras
 
@@ -71,6 +83,9 @@ Elas mandam mais que a soma das notas.
   explícita não entra.
 - **A lista fechada é a fronteira.** Post de conta fora dela é descartado na
   normalização, antes de chegar ao motor.
+- **Handle quebrado não falha em silêncio.** Perfil que a Apify não encontra vira
+  saúde de fonte visível na tela de Fontes, e conta sem handle confirmado nem
+  entra na coleta. Uma fonte que some sem avisar é a falha mais cara aqui.
 
 ## Estrutura
 

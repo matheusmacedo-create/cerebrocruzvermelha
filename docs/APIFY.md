@@ -80,9 +80,52 @@ Ele é ótimo para explorar e depurar. A coleta de produção continua sendo o c
 uma rotina que a instituição depende não deveria precisar de alguém conversando
 com um assistente para rodar.
 
+## Estado dos handles do Instagram
+
+Conferido contra a Apify em 31/08/2026 com `npm run handles`. Dos 23 handles da
+lista original, **7 não existiam** e um redirecionava para outra organização —
+o pior caso, porque atribuiria conteúdo alheio à fonte errada.
+
+| Conta | Handle na lista | Achado |
+|---|---|---|
+| Defesa Civil Municipal | `@defesacivilrio` | não existe → **`@defesacivil_rio`** |
+| MetrôRio | `@metroriooficial` | não existe → **`@metro_rio`** |
+| Maré de Notícias | `@maredenoticias` | redireciona para `@vozdascomunidades` → **`@redesdamare`**, a organização que publica o jornal |
+| INEA | `@ineagovrj` | não existe, sem substituto confirmado |
+| Fogo Cruzado | `@fogocruzadorj` | não existe, sem substituto confirmado |
+| OTT | `@ott_rio` | não existe, sem substituto confirmado |
+| SuperVia | `@supervia_trens` | não existe, sem substituto confirmado |
+| CCR Barcas | `@ccrbarcas` | não existe; `@ccr_barcas` existe mas não parece institucional |
+
+As cinco sem substituto ficam com `instagramStatus: "ausente"` e **não entram na
+coleta** — pedir handle inexistente gasta run e faz a fonte sumir sem avisar.
+Elas seguem na lista pelo X, que é a fase 2.
+
+`@defesacivilrj`, `@fiocruz` e `@falaroca` existem mas o Instagram bloqueia o
+scraper de forma intermitente (`no_items` com *"Request got blocked"*). Continuam
+sendo pedidas; o bloqueio passa.
+
+Reconfira quando a coleta trouxer menos do que devia:
+
+```bash
+npm run handles                       # a lista inteira
+npm run handles -- metro_rio inea_rj  # só estes
+```
+
+Uma run por handle, porque em lote o actor omite o `inputUrl` nos registros de
+`not_found` e não dá para saber qual falhou. Handle inexistente não gera post
+cobrável, então conferir custa quase nada.
+
+## Custo medido
+
+Medido em runs reais de 31/08/2026: **US$ 0,0023 por post** (US$ 2,30/mil).
+A coleta de `tempo_real` com 4 perfis trouxe 16 posts por US$ 0,04. Perfil que
+falha não é cobrado.
+
 ## Fase 2 — o que ainda não está aqui
 
-- **X (Twitter).** A lista já guarda os handles das 18 contas com X. Falta o actor
+- **X (Twitter).** A lista já guarda os handles das 18 contas com X, entre elas
+  as cinco que hoje estão fora da coleta por não ter Instagram confirmado. Falta o actor
   e um `normalizar` equivalente. O X é mais rápido que o Instagram em emergência,
   então é a próxima peça natural.
 - **Sites que bloqueiam.** Diário Oficial da União (403), IOERJ e Prefeitura do

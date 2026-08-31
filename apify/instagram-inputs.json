@@ -3,10 +3,8 @@
     "username": [
       "operacoesrio",
       "sistemaalertario",
-      "defesacivilrio",
-      "vozdascomunidades",
-      "fogocruzadorj",
-      "ott_rio"
+      "defesacivil_rio",
+      "vozdascomunidades"
     ],
     "resultsLimit": 12,
     "onlyPostsNewerThan": "2026-08-31",
@@ -16,14 +14,11 @@
     "username": [
       "defesacivilrj",
       "cbmerj",
-      "ineagovrj",
       "hemorio",
-      "maredenoticias",
+      "redesdamare",
       "falaroca",
       "agencialume",
-      "metroriooficial",
-      "supervia_trens",
-      "ccrbarcas",
+      "metro_rio",
       "cruzvermelhabrasileirarj"
     ],
     "resultsLimit": 8,

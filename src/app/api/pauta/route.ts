@@ -5,6 +5,7 @@ import { planoDeCanais, proibicoes } from "@/core/canais";
 import { direitoDe, podePublicar } from "@/core/direito";
 import { MODO_ROTULO } from "@/core/mente";
 import { VERSAO_CONTRATO } from "@/core/contrato";
+import { agrupar } from "@/core/agrupar";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
   const limite = Math.min(Number(url.searchParams.get("limite") ?? 20) || 20, 100);
 
   const acervo = await carregarAcervo();
-  let pontuados = pontuar(acervo.itens, { hoje: acervo.hoje });
+  let pontuados = agrupar(pontuar(acervo.itens, { hoje: acervo.hoje }));
 
   if (id) pontuados = pontuados.filter((p) => p.item.id === id);
   else if (modo) pontuados = pontuados.filter((p) => p.score.modo === modo);
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
   }
 
-  const pautas = pontuados.slice(0, limite).map(({ item, score }) => {
+  const pautas = pontuados.slice(0, limite).map(({ item, score, semelhantes, recolhidos }) => {
     const conta = resolverConta(item);
     const d = direitoDe(item);
     return {
@@ -82,6 +83,11 @@ export async function GET(req: Request) {
             credito: item.midia.credito,
           }
         : null,
+      // Boletins repetidos da mesma conta chegam agrupados, não como pautas soltas.
+      agrupados: semelhantes === 0 ? null : {
+        quantidade: semelhantes,
+        outros: recolhidos.map((r) => ({ id: r.id, titulo: r.titulo, quando: r.quando, url: r.url })),
+      },
       canais: planoDeCanais(item, score),
       proibido: proibicoes(item),
     };

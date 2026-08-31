@@ -69,6 +69,12 @@ export interface Conta {
   eixos: Eixo[];
   instagram?: string;
   x?: string;
+  /**
+   * Estado do handle do Instagram, conferido contra a Apify.
+   * `ausente` significa que a conta existe no X mas não foi possível
+   * confirmar o Instagram — ela não entra na coleta até alguém confirmar.
+   */
+  instagramStatus?: "confirmado" | "bloqueado" | "ausente" | "suspeito";
   /** Frequência de coleta. Governa custo na Apify. */
   cadencia: "tempo_real" | "diario" | "3_dias" | "10_dias";
   /** Por que esta conta está na lista. Aparece na UI — a lista precisa se justificar. */

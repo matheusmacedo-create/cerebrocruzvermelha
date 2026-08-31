@@ -19,6 +19,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["grd"],
     instagram: "@operacoesrio",
+    instagramStatus: "confirmado",
     x: "@OperacoesRio",
     cadencia: "tempo_real",
     porque: "Canal mais rápido do Rio para mudança de estágio da cidade, bolsões d'água e interdições.",
@@ -31,6 +32,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["grd"],
     instagram: "@sistemaalertario",
+    instagramStatus: "confirmado",
     x: "@sistemaalertario",
     cadencia: "tempo_real",
     porque: "Dados telemétricos, chuva por bairro e ventos fortes. É quem eleva o estágio.",
@@ -41,7 +43,8 @@ export const CONTAS: Conta[] = [
     categoria: "emergencia",
     vinculo: "oficial",
     eixos: ["grd"],
-    instagram: "@defesacivilrio",
+    instagram: "@defesacivil_rio",
+    instagramStatus: "confirmado",
     x: "@defesacivil_rio",
     cadencia: "tempo_real",
     porque: "Acionamento de sirenes em comunidades e abertura de pontos de apoio.",
@@ -54,6 +57,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["grd"],
     instagram: "@defesacivilrj",
+    instagramStatus: "bloqueado",
     x: "@DefesaCivilRJ",
     cadencia: "diario",
     porque: "Alertas para os 92 municípios fluminenses e simulados.",
@@ -66,6 +70,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["grd", "primeiros_socorros"],
     instagram: "@cbmerj",
+    instagramStatus: "confirmado",
     x: "@cbmerj_oficial",
     cadencia: "diario",
     porque: "Operações de resgate de grande porte, desabamentos e incêndios.",
@@ -77,7 +82,8 @@ export const CONTAS: Conta[] = [
     categoria: "emergencia",
     vinculo: "oficial",
     eixos: ["grd"],
-    instagram: "@ineagovrj",
+    instagram: undefined,
+    instagramStatus: "ausente",
     x: "@inea_rj",
     cadencia: "diario",
     porque: "Níveis de rios e risco de transbordamento no estado. Antecede enchente na Baixada.",
@@ -91,6 +97,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["saude"],
     instagram: "@saude_rio",
+    instagramStatus: "confirmado",
     x: "@saudeprefrio",
     cadencia: "3_dias",
     porque: "Campanhas de vacinação, funcionamento de postos e boletins locais.",
@@ -103,6 +110,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["saude"],
     instagram: "@saudegovrj",
+    instagramStatus: "confirmado",
     x: "@SaudeGovRJ",
     cadencia: "3_dias",
     porque: "Situação dos hospitais estaduais e boletins epidemiológicos.",
@@ -114,6 +122,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["saude", "voluntariado"],
     instagram: "@hemorio",
+    instagramStatus: "confirmado",
     x: "@HEMORIO",
     cadencia: "diario",
     porque: "Nível dos estoques de sangue. Estoque crítico é o gatilho de pauta de doação — nunca o contrário.",
@@ -126,6 +135,7 @@ export const CONTAS: Conta[] = [
     vinculo: "oficial",
     eixos: ["saude"],
     instagram: "@fiocruz",
+    instagramStatus: "bloqueado",
     x: "@fiocruz",
     cadencia: "3_dias",
     porque: "Notas técnicas sobre vacinas, arboviroses e saúde coletiva. Fonte para não errar o fato.",
@@ -139,6 +149,7 @@ export const CONTAS: Conta[] = [
     vinculo: "comunitario",
     eixos: ["grd", "saude"],
     instagram: "@vozdascomunidades",
+    instagramStatus: "confirmado",
     x: "@vozdacomunidade",
     cadencia: "tempo_real",
     porque: "Registra primeiro o impacto de chuva, falta de luz e água no Alemão e em favelas do Rio.",
@@ -150,7 +161,8 @@ export const CONTAS: Conta[] = [
     categoria: "territorio",
     vinculo: "comunitario",
     eixos: ["grd", "saude"],
-    instagram: "@maredenoticias",
+    instagram: "@redesdamare",
+    instagramStatus: "confirmado",
     x: "@mare_noticias",
     cadencia: "diario",
     porque: "Complexo da Maré. Território de operação recorrente da filial.",
@@ -162,6 +174,7 @@ export const CONTAS: Conta[] = [
     vinculo: "comunitario",
     eixos: ["grd", "saude"],
     instagram: "@falaroca",
+    instagramStatus: "bloqueado",
     x: "@falaroca",
     cadencia: "diario",
     porque: "Rocinha. Chuva forte na Zona Sul aparece aqui antes do boletim.",
@@ -173,6 +186,7 @@ export const CONTAS: Conta[] = [
     vinculo: "comunitario",
     eixos: ["grd", "saude"],
     instagram: "@agencialume",
+    instagramStatus: "confirmado",
     cadencia: "diario",
     porque: "Baixada Fluminense: desastre climático, saúde e direitos humanos.",
   },
@@ -183,6 +197,7 @@ export const CONTAS: Conta[] = [
     vinculo: "comunitario",
     eixos: ["grd", "saude"],
     instagram: "@labjaca",
+    instagramStatus: "confirmado",
     cadencia: "3_dias",
     porque: "Dados e relatórios sobre saneamento e crise climática nas periferias. Vira base de matéria, não de post rápido.",
   },
@@ -194,7 +209,8 @@ export const CONTAS: Conta[] = [
     categoria: "seguranca",
     vinculo: "monitor",
     eixos: ["grd"],
-    instagram: "@fogocruzadorj",
+    instagram: undefined,
+    instagramStatus: "ausente",
     x: "@FogoCruzadoRJ",
     cadencia: "tempo_real",
     porque: "Disparos e operações policiais. Vital para a segurança das equipes de campo.",
@@ -206,7 +222,8 @@ export const CONTAS: Conta[] = [
     categoria: "seguranca",
     vinculo: "monitor",
     eixos: ["grd"],
-    instagram: "@ott_rio",
+    instagram: undefined,
+    instagramStatus: "ausente",
     x: "@ott_rio",
     cadencia: "tempo_real",
     porque: "Alertas em tempo real de tiroteio, arrastão e vias bloqueadas.",
@@ -220,7 +237,8 @@ export const CONTAS: Conta[] = [
     categoria: "mobilidade",
     vinculo: "servico",
     eixos: ["grd"],
-    instagram: "@metroriooficial",
+    instagram: "@metro_rio",
+    instagramStatus: "confirmado",
     x: "@MetroRio",
     cadencia: "diario",
     porque: "Principal eixo de transporte da capital. Define se voluntário e doação chegam.",
@@ -232,7 +250,8 @@ export const CONTAS: Conta[] = [
     categoria: "mobilidade",
     vinculo: "servico",
     eixos: ["grd"],
-    instagram: "@supervia_trens",
+    instagram: undefined,
+    instagramStatus: "ausente",
     x: "@SuperVia_trens",
     cadencia: "diario",
     porque: "Ramais da Baixada e Zonas Norte e Oeste. Onde mora a maior parte do voluntariado.",
@@ -243,7 +262,8 @@ export const CONTAS: Conta[] = [
     categoria: "mobilidade",
     vinculo: "servico",
     eixos: ["grd"],
-    instagram: "@ccrbarcas",
+    instagram: undefined,
+    instagramStatus: "ausente",
     x: "@CCRBarcas",
     cadencia: "diario",
     porque: "Ligação Praça XV–Niterói e Paquetá. Paquetá é área isolada em emergência.",
@@ -257,6 +277,7 @@ export const CONTAS: Conta[] = [
     vinculo: "casa",
     eixos: ["institucional", "primeiros_socorros", "voluntariado", "grd", "saude"],
     instagram: "@cruzvermelhabrasileirarj",
+    instagramStatus: "confirmado",
     cadencia: "diario",
     porque: "A própria Casa. Memória do que já foi publicado — impede repetir gancho e ensina o que performou.",
   },
@@ -267,6 +288,7 @@ export const CONTAS: Conta[] = [
     vinculo: "movimento",
     eixos: ["institucional", "grd", "saude"],
     instagram: "@cruzvermelhabrasileira",
+    instagramStatus: "confirmado",
     cadencia: "3_dias",
     porque: "Movimento nacional. Está na lista também para o Cérebro aprender a recusar peça velha.",
     cuidado: "FILTRO DE DATA OBRIGATÓRIO. Repost antigo sem data explícita não entra.",
@@ -278,6 +300,7 @@ export const CONTAS: Conta[] = [
     vinculo: "movimento",
     eixos: ["institucional", "grd"],
     instagram: "@ifrc",
+    instagramStatus: "confirmado",
     cadencia: "10_dias",
     porque: "Movimento global. Só entra se citar Brasil ou se for data oficial do movimento.",
   },
@@ -297,9 +320,24 @@ export const CATEGORIAS: Record<string, { rotulo: string; descricao: string }> =
 /** Contas cujo conteúdo nunca vira peça pública — só alimentam decisão interna. */
 export const SOMENTE_INTERNO = new Set(["fogo-cruzado", "ott-rio", "metrorio", "supervia", "ccr-barcas"]);
 
-/** Handles do Instagram sem o @, no formato que a Apify espera. */
+/**
+ * Handles do Instagram sem o @, no formato que a Apify espera.
+ *
+ * Só devolve handle confirmado contra a Apify. Pedir um handle inexistente
+ * gasta run e, pior, some da coleta em silêncio — a fonte simplesmente para
+ * de aparecer sem ninguém notar. Contas `ausente` ficam de fora até alguém
+ * confirmar o handle; `bloqueado` continua sendo pedido, porque o handle
+ * existe e o bloqueio do Instagram é intermitente.
+ */
 export function perfisInstagram(filtro?: (c: Conta) => boolean): string[] {
-  return CONTAS.filter((c) => c.instagram && (filtro ? filtro(c) : true)).map((c) => c.instagram!.replace(/^@/, ""));
+  return CONTAS.filter(
+    (c) => c.instagram && c.instagramStatus !== "ausente" && c.instagramStatus !== "suspeito" && (filtro ? filtro(c) : true),
+  ).map((c) => c.instagram!.replace(/^@/, ""));
+}
+
+/** Contas cujo Instagram ainda não foi confirmado. Aparecem na tela de Fontes. */
+export function contasSemInstagram(): Conta[] {
+  return CONTAS.filter((c) => c.instagramStatus === "ausente" || c.instagramStatus === "suspeito");
 }
 
 export function perfisX(filtro?: (c: Conta) => boolean): string[] {

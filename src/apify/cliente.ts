@@ -80,11 +80,19 @@ export async function lerDataset<T>(datasetId: string, limite = 1000): Promise<T
   return api<T[]>(`/datasets/${datasetId}/items?clean=true&limit=${limite}`);
 }
 
-/** Lê um registro do Key-Value Store. Devolve null quando a chave não existe. */
-export async function lerKV<T>(storeId: string, chave: string): Promise<T | null> {
+/**
+ * Lê um registro do Key-Value Store. Devolve null quando a chave não existe.
+ *
+ * Por padrão a leitura entra no cache do Next pelo mesmo tempo das telas: uma
+ * leitura `no-store` aqui torna toda página que carrega o acervo dinâmica, e
+ * as que são geradas estaticamente falham e caem para a semente — servindo
+ * dado velho para sempre, em silêncio. O webhook pede `fresco` porque acabou
+ * de gravar e precisa enxergar o que gravou.
+ */
+export async function lerKV<T>(storeId: string, chave: string, fresco = false): Promise<T | null> {
   const r = await fetch(`${BASE}/key-value-stores/${storeId}/records/${chave}`, {
     headers: { Authorization: `Bearer ${token()}` },
-    cache: "no-store",
+    ...(fresco ? { cache: "no-store" as const } : { next: { revalidate: 900 } }),
   });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`Apify KV ${r.status} ao ler ${chave}`);
