@@ -61,13 +61,30 @@ export function familia(item: Item): string | null {
   return `${conta.id}::${chave}`;
 }
 
+/**
+ * Assinatura da notícia em si, independente de por onde ela chegou.
+ *
+ * A mesma nota da Defesa Civil chega pelo RSS institucional e pelo Instagram
+ * da conta. São ids diferentes, então a deduplicação por id não pega, e a
+ * tela mostra o mesmo fato duas vezes — parte do que faz o dia parecer
+ * repetitivo mesmo quando não é.
+ */
+export function mesmaNoticia(item: Item): string | null {
+  const chave = normalizar(item.titulo)
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 70);
+  return chave.length >= 25 ? `noticia::${chave}` : null;
+}
+
 /** Recolhe boletins repetidos, preservando a ordem por nota. */
 export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
   const familias = new Map<string, { item: Item; score: Score }[]>();
   const soltos: Agrupado[] = [];
 
   for (const p of pontuados) {
-    const f = familia(p.item);
+    const f = familia(p.item) ?? mesmaNoticia(p.item);
     if (!f) {
       soltos.push({ ...p, semelhantes: 0, recolhidos: [] });
       continue;
@@ -103,4 +120,34 @@ export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
   }
 
   return [...soltos, ...agrupados].sort((a, b) => b.score.total - a.score.total);
+}
+
+/**
+ * Diversidade na tela de atenção.
+ *
+ * O agrupamento resolve boletim repetido do mesmo gabarito, mas não resolve
+ * uma conta que publicou três notícias distintas e boas: elas são diferentes
+ * entre si e ocupam a tela inteira, enquanto fontes com um sinal só ficam
+ * invisíveis. Quem abre precisa ver a variedade do dia, não o ranking de
+ * quem postou mais.
+ *
+ * As excedentes não somem — vão para o Jornal, ordenadas por nota como sempre.
+ */
+export function diversificar(lista: Agrupado[], porFonte = 2): Agrupado[] {
+  const contagem = new Map<string, number>();
+  const escolhidos: Agrupado[] = [];
+  const sobra: Agrupado[] = [];
+
+  for (const a of lista) {
+    const chave = resolverConta(a.item)?.id ?? a.item.fonte;
+    const n = contagem.get(chave) ?? 0;
+    if (n < porFonte) {
+      contagem.set(chave, n + 1);
+      escolhidos.push(a);
+    } else {
+      sobra.push(a);
+    }
+  }
+  // A sobra volta no fim: se houver poucas fontes no dia, a tela não fica vazia.
+  return [...escolhidos, ...sobra];
 }

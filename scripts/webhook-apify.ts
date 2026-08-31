@@ -10,7 +10,7 @@
  *
  * Idempotente: um webhook por task, atualizado no lugar.
  */
-import { CADENCIAS, type Cadencia } from "../src/apify/input";
+import { todosOsLotes } from "../src/apify/input";
 
 const BASE = "https://api.apify.com/v2";
 const token = process.env.APIFY_TOKEN;
@@ -18,15 +18,16 @@ const segredo = process.env.APIFY_WEBHOOK_SECRET;
 const dry = process.argv.includes("--dry");
 const base = process.argv.slice(2).find((a) => a.startsWith("http"))?.replace(/\/$/, "");
 
-const nomeTask = (c: Cadencia) => `cerebro-cvrj-${c.replace(/_/g, "-")}`;
-
 async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${caminho}`, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   if (!r.ok) throw new Error(`Apify ${r.status} em ${init?.method ?? "GET"} ${caminho}: ${(await r.text()).slice(0, 300)}`);
-  return (await r.json()) as T;
+  // DELETE responde 204 sem corpo: ler JSON aí quebra numa chamada que deu certo.
+  if (r.status === 204) return undefined as T;
+  const texto = await r.text();
+  return (texto ? JSON.parse(texto) : undefined) as T;
 }
 
 interface Nomeado { id: string; name?: string; requestUrl?: string; condition?: { actorTaskId?: string } }
@@ -53,8 +54,8 @@ async function main() {
   const tasks = (await api<{ data: { items: Nomeado[] } }>("/actor-tasks?limit=1000")).data.items;
   const webhooks = (await api<{ data: { items: Nomeado[] } }>("/webhooks?limit=1000")).data.items;
 
-  for (const cadencia of CADENCIAS) {
-    const nome = nomeTask(cadencia);
+  for (const lote of todosOsLotes()) {
+    const nome = lote.nome;
     const task = tasks.find((t) => t.name === nome);
     if (!task) {
       console.log(`· ${nome}: task não encontrada. Rode npm run provisionar antes.`);
@@ -64,7 +65,7 @@ async function main() {
       eventTypes: ["ACTOR.RUN.SUCCEEDED"],
       condition: { actorTaskId: task.id },
       requestUrl: url,
-      description: `Cérebro CVRJ — avisa o app quando a coleta ${cadencia.replace(/_/g, " ")} termina.`,
+      description: `Cérebro CVRJ — avisa o app quando a coleta ${nome} termina.`,
       isAdHoc: false,
     };
     if (dry) {
@@ -77,6 +78,18 @@ async function main() {
       : (await api<{ data: Nomeado }>("/webhooks", { method: "POST", body: JSON.stringify(corpo) })).data;
     console.log(`· ${nome}: webhook ${existente ? "atualizado" : "criado"} (${w.id})`);
   }
+  // Webhook de task apagada fica órfão e polui o painel da Apify.
+  if (!dry) {
+    const vivos = new Set(todosOsLotes().map((l) => tasks.find((t) => t.name === l.nome)?.id).filter(Boolean));
+    for (const w of webhooks) {
+      const alvo = w.condition?.actorTaskId;
+      if (!alvo || vivos.has(alvo)) continue;
+      if (!(w.requestUrl ?? "").includes("/api/webhook/apify")) continue;
+      await api(`/webhooks/${w.id}`, { method: "DELETE" }).catch(() => {});
+      console.log(`· webhook órfão removido (${w.id})`);
+    }
+  }
+
   console.log(dry ? "\n--dry: nada foi enviado." : "\nPronto. A próxima coleta já avisa o app.");
 }
 

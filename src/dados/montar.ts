@@ -1,4 +1,4 @@
-import type { Acervo, Item, SaudeFonte } from "@/core/tipos";
+import type { Acervo, Item, RegistroColeta, SaudeFonte } from "@/core/tipos";
 import { decidir } from "@/core/mente";
 import { relevanciaDe } from "./acervo";
 import { SEMENTE } from "./acervo";
@@ -26,6 +26,8 @@ export function montarAcervo(opcoes: {
   base?: Omit<Acervo, "origem">;
   saudeColeta?: SaudeFonte[];
   hoje?: string;
+  /** Quantos perfis foram pedidos e quantos responderam nesta coleta. */
+  coleta?: { pedidos: number; responderam: number };
 }): Omit<Acervo, "origem"> {
   const base = opcoes.base ?? SEMENTE;
   const hoje = opcoes.hoje ?? new Date().toISOString().slice(0, 10);
@@ -54,9 +56,20 @@ export function montarAcervo(opcoes: {
   // Uma fonte recoletada substitui a leitura anterior.
   const saudeUnica = [...new Map(saude.map((s) => [s.fonte, s])).values()];
 
+  // Histórico do bloqueio do Instagram, para tunar a coleta com dado e não
+  // com palpite: o bloqueio muda com a hora, com a frequência e com o humor
+  // do Instagram, e uma run isolada não diz nada.
+  const bloqueio = [
+    ...(opcoes.coleta
+      ? [{ quando: new Date().toISOString(), ...opcoes.coleta }]
+      : []),
+    ...((base as { bloqueio?: RegistroColeta[] }).bloqueio ?? []),
+  ].slice(0, 200);
+
   return {
     hoje,
     gerado_em: new Date().toISOString(),
+    bloqueio,
     metodo: "regras + cruzamento lexical eixo↔fonte, sobre lista fechada de contas. Sem modelo generativo.",
     totais: {
       itens: itens.length,

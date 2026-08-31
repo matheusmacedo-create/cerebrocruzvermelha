@@ -190,6 +190,47 @@ export interface Score {
   porque: string[];
 }
 
+/** Por que uma sugestão foi recusada. O motivo é o que ensina o Cérebro. */
+export type MotivoRecusa =
+  | "repetitivo"
+  | "sem_relacao"
+  | "sem_acao"
+  | "ja_falamos"
+  | "fonte_fraca"
+  | "outro";
+
+export const MOTIVOS: Record<MotivoRecusa, { rotulo: string; explica: string }> = {
+  repetitivo: { rotulo: "Repetitivo", explica: "Já apareceu coisa demais desta fonte ou deste assunto." },
+  sem_relacao: { rotulo: "Não é da Cruz", explica: "Boa informação, mas não é pauta da filial." },
+  sem_acao: { rotulo: "Sem ação nossa", explica: "Sem operação da filial, não vira peça." },
+  ja_falamos: { rotulo: "Já falamos disso", explica: "A Casa já publicou esse gancho." },
+  fonte_fraca: { rotulo: "Fonte fraca", explica: "Não sustenta uma peça pública." },
+  outro: { rotulo: "Outro motivo", explica: "Recusado por julgamento da equipe." },
+};
+
+/**
+ * Uma recusa humana.
+ *
+ * Guarda título e conta junto do id: o item sai do acervo com o tempo, mas a
+ * lição não pode sair junto. É isso que impede o Cérebro de sugerir de novo
+ * o que a equipe já recusou.
+ */
+export interface Recusa {
+  id: string;
+  motivo: MotivoRecusa;
+  titulo: string;
+  contaId?: string;
+  fonte: string;
+  quando: string;
+}
+
+/** Uma coleta e quantos perfis o Instagram deixou passar. */
+export interface RegistroColeta {
+  quando: string;
+  pedidos: number;
+  responderam: number;
+}
+
 /** O acervo inteiro num snapshot. É o que a UI lê. */
 export interface Acervo {
   hoje: string;
@@ -208,4 +249,6 @@ export interface Acervo {
   propostas: Proposta[];
   calendario: DataCalendario[];
   itens: Item[];
+  /** Histórico do bloqueio do Instagram, mais recente primeiro. */
+  bloqueio?: RegistroColeta[];
 }

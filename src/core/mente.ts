@@ -1,4 +1,4 @@
-import type { Conta, Eixo, Item, Modo, Score, Veredito } from "./tipos";
+import type { Conta, Eixo, Item, Modo, Recusa, Score, Veredito } from "./tipos";
 import { SOMENTE_INTERNO, contaPorHandle, resolverConta } from "./contas";
 import { ACAO_REAL, EIXO_TERMOS, PECA_VELHA, RJ, URGENTE, bate, conta as contaTermos } from "./lexico";
 
@@ -34,6 +34,11 @@ export interface ContextoDecisao {
    * Sem ação real, balanço de terceiro não vira peça.
    */
   acoesDaCasa?: string[];
+  /**
+   * O que a equipe já recusou, com o motivo.
+   * Sem isto o Cérebro repete a sugestão que acabou de ouvir "não".
+   */
+  recusados?: Recusa[];
 }
 
 
@@ -64,6 +69,20 @@ export function decidir(item: Item, ctx: ContextoDecisao): Score {
   const c = resolverConta(item);
   const porque: string[] = [];
 
+  const recusa = ctx.recusados?.find((r) => r.id === item.id);
+  if (recusa) {
+    return {
+      localidade: 0, urgencia: 0, relacao: 0, acaoReal: 0, ineditismo: 0, confianca: 0,
+      total: 0,
+      modo: "arquivar",
+      veredito: "nao",
+      porque: [
+        `Você recusou este sinal: ${MOTIVO_CURTO[recusa.motivo]}.`,
+        "Fica no acervo como decisão registrada. Não volta a disputar atenção.",
+      ],
+    };
+  }
+
   if (!ehSinal(item)) {
     return {
       localidade: 0, urgencia: 0, relacao: 0, acaoReal: 0, ineditismo: 0, confianca: 0,
@@ -81,7 +100,7 @@ export function decidir(item: Item, ctx: ContextoDecisao): Score {
   const urgencia = medirUrgencia(texto, item, porque);
   const { nota: relacao, eixo } = medirRelacao(texto, c, porque);
   const acaoReal = medirAcaoReal(texto, c, ctx, porque);
-  const ineditismo = medirIneditismo(texto, ctx, porque);
+  const ineditismo = medirIneditismo(texto, ctx, porque, c);
   const confianca = medirConfianca(item, c, porque);
 
   let total = Math.round(
@@ -212,10 +231,22 @@ function medirAcaoReal(texto: string, c: Conta | undefined, ctx: ContextoDecisao
 }
 
 // ─── Já falamos disso? ───────────────────────────────────────────────────
-function medirIneditismo(texto: string, ctx: ContextoDecisao, porque: string[]): number {
+function medirIneditismo(texto: string, ctx: ContextoDecisao, porque: string[], conta?: Conta): number {
   if (bate(texto, PECA_VELHA)) {
     porque.push("Marcas de conteúdo requentado. Filtro de data reprova.");
     return 8;
+  }
+
+  // Recusa por repetição é sobre a fonte, não só sobre aquele post: se a
+  // equipe disse que a conta está aparecendo demais, o Cérebro recua nela.
+  const cansaco = (ctx.recusados ?? []).filter(
+    (r) => (r.motivo === "repetitivo" || r.motivo === "ja_falamos") && conta && r.contaId === conta.id,
+  ).length;
+  if (cansaco > 0) {
+    porque.push(
+      `Você recusou ${cansaco} sugestão(ões) desta fonte por repetição. O Cérebro recua nela até vir algo diferente.`,
+    );
+    return Math.max(10, 85 - cansaco * 25);
   }
   const publicados = ctx.jaPublicado ?? [];
   const repetido = publicados.some((p) => {
@@ -284,6 +315,15 @@ export const MODO_ROTULO: Record<Modo, string> = {
   monitorar: "Monitorar",
   arquivar: "Arquivar",
   folga_ou_plantao: "Folga ou plantão",
+};
+
+const MOTIVO_CURTO: Record<Recusa["motivo"], string> = {
+  repetitivo: "repetitivo",
+  sem_relacao: "não é pauta da Cruz",
+  sem_acao: "sem ação da filial",
+  ja_falamos: "a Casa já falou disso",
+  fonte_fraca: "fonte não sustenta",
+  outro: "julgamento da equipe",
 };
 
 export const VEREDITO_ROTULO: Record<Veredito, string> = {

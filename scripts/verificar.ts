@@ -1,6 +1,6 @@
 /** Confere o motor de decisão contra casos concretos e contra o acervo real. */
 import { decidir, ehSinal } from "../src/core/mente";
-import { agrupar, familia } from "../src/core/agrupar";
+import { agrupar, diversificar, familia, mesmaNoticia } from "../src/core/agrupar";
 import { direitoDe, podePublicar } from "../src/core/direito";
 import { planoDeCanais } from "../src/core/canais";
 import { errosParaSaude, perfisBloqueados, postsParaItens, saudeDaColeta } from "../src/apify/normalizar";
@@ -180,6 +180,50 @@ checar("resumo perde o prefixo repetido",
 checar("resumo diferente do título fica intacto",
   semORepetido("Um título", "Um resumo que não começa igual") === "Um resumo que não começa igual");
 checar("chave de mídia é derivada do id", chaveMidia("abc123") === "midia-abc123");
+
+// 6f. Recusa humana derruba o sinal e ensina sobre a fonte
+const alvo = base({ id: "rec1", contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)",
+  titulo: "Defesa Civil RJ realiza simulado de comunicações", resumo: "x".repeat(60), quando: new Date().toISOString() });
+const semRecusa = decidir(alvo, ctx);
+const comRecusa = decidir(alvo, { ...ctx, recusados: [
+  { id: "rec1", motivo: "sem_acao", titulo: alvo.titulo, contaId: "sedec-rj", fonte: alvo.fonte, quando: "2026-08-31" },
+]});
+checar("sinal recusado sai da atenção", comRecusa.modo === "arquivar" && semRecusa.modo !== "arquivar", comRecusa.modo);
+checar("a recusa aparece no porquê", comRecusa.porque.some((p) => p.includes("recusou")));
+
+// Recusa por repetição pesa na fonte inteira, não só naquele post.
+const outro = base({ id: "rec2", contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)",
+  titulo: "Defesa Civil RJ recebe representantes da Defesa Civil Nacional", resumo: "y".repeat(60), quando: new Date().toISOString() });
+const cansado = decidir(outro, { ...ctx, recusados: [
+  { id: "rec1", motivo: "repetitivo", titulo: "outro", contaId: "sedec-rj", fonte: outro.fonte, quando: "2026-08-31" },
+]});
+checar("repetição derruba o ineditismo da fonte", cansado.ineditismo < decidir(outro, ctx).ineditismo,
+  `${cansado.ineditismo} vs ${decidir(outro, ctx).ineditismo}`);
+
+// 6f2. Mesmo fato por dois caminhos vira um item só
+const porRss = base({ id: "rss1", fonte: "Defesa Civil do Estado (RJ)", plataforma: "rss",
+  titulo: "Defesa Civil RJ realiza simulado para restabelecimento de comunicações críticas",
+  resumo: "Exercício reuniu órgãos estaduais.".padEnd(60, "."), quando: new Date().toISOString() });
+const porInsta = base({ id: "ig1", contaId: "sedec-rj", fonte: "Defesa Civil do Estado do RJ (SEDEC-RJ)",
+  titulo: "Defesa Civil RJ realiza simulado para restabelecimento de comunicações críticas",
+  resumo: "O mesmo fato, publicado no Instagram.".padEnd(60, "."), quando: new Date().toISOString() });
+checar("mesma notícia tem a mesma assinatura", mesmaNoticia(porRss) === mesmaNoticia(porInsta));
+const juntos = agrupar([porRss, porInsta].map((i) => ({ item: i, score: decidir(i, ctx) })));
+checar("o mesmo fato não aparece duas vezes", juntos.length === 1 && juntos[0].semelhantes === 1, `${juntos.length} itens`);
+const distinta = base({ id: "x1", fonte: "Defesa Civil do Estado (RJ)", plataforma: "rss",
+  titulo: "Estado reforça planejamento para as chuvas nas rodovias", resumo: "z".repeat(60), quando: new Date().toISOString() });
+checar("notícias distintas seguem separadas",
+  agrupar([porRss, distinta].map((i) => ({ item: i, score: decidir(i, ctx) }))).length === 2);
+
+// 6g. Diversidade: uma conta não ocupa a tela inteira
+const muitos = ["a","b","c","d"].map((k, i) => base({ id: "d" + k, contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)",
+  titulo: `Defesa Civil RJ faz coisa ${k}`, resumo: "z".repeat(60), quando: new Date(Date.now() - i * 3600e3).toISOString() }));
+const umDeOutra = base({ id: "outra", contaId: "hemorio", fonte: "Hemorio",
+  titulo: "Hemorio alerta para estoque crítico de sangue tipo O", resumo: "w".repeat(60), quando: new Date().toISOString() });
+const div = diversificar(agrupar([...muitos, umDeOutra].map((i) => ({ item: i, score: decidir(i, ctx) }))), 2);
+const top3 = div.slice(0, 3).map((d) => d.item.contaId);
+checar("a terceira vaga não é da mesma fonte", top3.filter((c) => c === "sedec-rj").length <= 2, top3.join(","));
+checar("diversificar não perde item", div.length === 5, String(div.length));
 
 // 7. Input da Apify sai da lista, não da mão
 const inp = inputInstagram("tempo_real");

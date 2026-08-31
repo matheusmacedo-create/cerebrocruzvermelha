@@ -52,7 +52,10 @@ export async function POST(req: Request) {
     // `fresco`: acabamos de gravar e precisamos mesclar sobre o estado atual.
     const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
     // Perfis que falharam viram saúde de fonte visível na tela de Fontes.
-    const snapshot = montarAcervo({ novos, base, saudeColeta: saudeDaColeta(posts) });
+    const snapshot = montarAcervo({ novos, base, saudeColeta: saudeDaColeta(posts), coleta: {
+      pedidos: new Set(posts.map((x) => (x.ownerUsername ?? (x.inputUrl ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, ""))).filter(Boolean)).size,
+      responderam: new Set(posts.filter((x) => x.ownerUsername).map((x) => x.ownerUsername!)).size,
+    } });
     await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
 
     // As URLs da CDN expiram em dias: os bytes são copiados agora, enquanto

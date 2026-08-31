@@ -75,7 +75,10 @@ async function main() {
   // Mesma regra do webhook: perfil que falhou vira saúde de fonte visível.
   const saudeColeta = saudeDaColeta(posts);
   const falhas = saudeColeta.filter((s) => !s.ok);
-  const snapshot = montarAcervo({ novos, base, saudeColeta });
+  const snapshot = montarAcervo({ novos, base, saudeColeta, coleta: {
+      pedidos: new Set(posts.map((x) => (x.ownerUsername ?? (x.inputUrl ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, ""))).filter(Boolean)).size,
+      responderam: new Set(posts.filter((x) => x.ownerUsername).map((x) => x.ownerUsername!)).size,
+    } });
   for (const f of falhas) console.log(`  ! ${f.fonte}: ${f.detalhe}`);
   await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
   console.log(`Snapshot gravado: ${snapshot.totais.itens} sinais, ${snapshot.totais.alta} de relevância alta.`);

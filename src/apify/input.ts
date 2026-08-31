@@ -66,12 +66,77 @@ export function todosOsInputsInstagram(): Record<Cadencia, InputInstagram> {
 export const AGENDA: Record<Cadencia, { cron: string; descricao: string }> = {
   tempo_real: { cron: "0 */6 * * *", descricao: "a cada 6 horas" },
   diario: { cron: "20 9 * * *", descricao: "todo dia às 9h20" },
-  "3_dias": { cron: "40 9 */3 * *", descricao: "a cada 3 dias, às 9h40" },
-  "10_dias": { cron: "0 10 1,11,21 * *", descricao: "nos dias 1, 11 e 21, às 10h" },
+  // Espalhadas pelo dia de propósito: coletas encostadas viram uma rajada
+  // de runs, e é a rajada que o Instagram bloqueia.
+  "3_dias": { cron: "40 14 */3 * *", descricao: "a cada 3 dias, às 14h40" },
+  "10_dias": { cron: "0 19 1,11,21 * *", descricao: "nos dias 1, 11 e 21, às 19h" },
 };
 
 /** Fuso das agendas. Boletim de chuva do Rio é lido em horário do Rio. */
 export const FUSO = "America/Sao_Paulo";
+
+/**
+ * Quantos perfis por run.
+ *
+ * O Instagram bloqueia, e a pergunta é o que dispara o bloqueio. Medido na
+ * operação: a primeira coleta do dia acertou 12 de 23 perfis; as seguintes,
+ * na mesma hora, caíram para 1 de 8. Testei a hipótese de que o tamanho do
+ * lote era a causa — um lote de 3 perfis voltou 0 de 3. Não é o tamanho.
+ *
+ * O que resta é o número de runs na janela: mais lotes significam mais runs,
+ * e mais runs significam mais bloqueio. Então o teto é alto de propósito —
+ * cada cadência cabe em uma run só. O valor fica aqui, num lugar só, para
+ * ser ajustado quando houver uma semana de dados em vez de palpite.
+ */
+export const PERFIS_POR_LOTE = 8;
+
+/** Minutos de espaçamento entre lotes da mesma cadência. */
+export const ESPACO_MINUTOS = 17;
+
+export interface Lote {
+  cadencia: Cadencia;
+  indice: number;
+  nome: string;
+  input: InputInstagram;
+  cron: string;
+  descricao: string;
+}
+
+/** Divide uma cadência em lotes escalonados, cada um com sua agenda. */
+export function lotesDe(cadencia: Cadencia): Lote[] {
+  const base = inputInstagram(cadencia);
+  const lotes: Lote[] = [];
+  for (let i = 0; i * PERFIS_POR_LOTE < base.username.length; i++) {
+    const perfis = base.username.slice(i * PERFIS_POR_LOTE, (i + 1) * PERFIS_POR_LOTE);
+    const { cron, descricao } = escalonar(AGENDA[cadencia].cron, i, AGENDA[cadencia].descricao);
+    lotes.push({
+      cadencia,
+      indice: i,
+      nome: `cerebro-cvrj-${cadencia.replace(/_/g, "-")}-${i + 1}`,
+      input: { ...base, username: perfis },
+      cron,
+      descricao,
+    });
+  }
+  return lotes;
+}
+
+/** Empurra o minuto do cron, mantendo o resto da expressão. */
+function escalonar(cron: string, indice: number, descricao: string): { cron: string; descricao: string } {
+  if (indice === 0) return { cron, descricao };
+  const campos = cron.split(" ");
+  const minuto = Number(campos[0]);
+  if (Number.isNaN(minuto)) return { cron, descricao: `${descricao} (lote ${indice + 1})` };
+  const novo = (minuto + indice * ESPACO_MINUTOS) % 60;
+  // Passar da hora exigiria mexer no campo da hora; espaçamento cabe em 60min.
+  campos[0] = String(novo);
+  return { cron: campos.join(" "), descricao: `${descricao}, lote ${indice + 1} aos ${novo} min` };
+}
+
+/** Todos os lotes de todas as cadências. */
+export function todosOsLotes(): Lote[] {
+  return CADENCIAS.flatMap(lotesDe);
+}
 
 /** Resumo legível da lista, para conferência humana antes de rodar. */
 export function resumoDaLista(): string {

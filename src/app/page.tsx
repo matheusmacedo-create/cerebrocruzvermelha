@@ -2,11 +2,13 @@ import Link from "next/link";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { MODO_ROTULO } from "@/core/mente";
 import { CONTAS } from "@/core/contas";
-import { agrupar } from "@/core/agrupar";
+import { agrupar, diversificar } from "@/core/agrupar";
 import { corDoModo, faixaDeAtencao } from "@/ui/selos";
 import { Barras } from "@/ui/Barras";
 import { Midia } from "@/ui/Midia";
 import { semORepetido } from "@/ui/texto";
+import { Recusar } from "@/ui/Recusar";
+import { lerRecusas } from "@/dados/feedback";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -19,10 +21,13 @@ export const revalidate = 900;
  */
 export default async function Hoje() {
   const acervo = await carregarAcervo();
-  const ctx = { hoje: acervo.hoje };
+  const recusados = await lerRecusas();
+  const ctx = { hoje: acervo.hoje, recusados };
 
   // Agrupa antes de escolher: boletim de hora em hora não pode ocupar a tela.
-  const pontuados = agrupar(pontuar(acervo.itens, ctx));
+  // Agrupa boletim repetido, depois espalha por fonte: sem isso uma conta
+  // que publicou muito ocupa a tela e as outras somem.
+  const pontuados = diversificar(agrupar(pontuar(acervo.itens, ctx)));
   const atencao = pontuados
     .filter((p) => p.score.modo === "agir_agora" || p.score.modo === "produzir" || p.score.modo === "agendar")
     .slice(0, 6);
@@ -47,6 +52,13 @@ export default async function Hoje() {
           {emTempoReal > 0 ? ` (${emTempoReal} delas em tempo real)` : ""} e guardou {escondidos} no
           acervo{recolhidos > 0 ? `, agrupando ${recolhidos} boletins repetidos` : ""}. Estes{" "}
           {atencao.length} pedem decisão.
+          {recusados.length > 0 && (
+            <>
+              {" "}
+              Você já recusou {recusados.length} sugestão(ões) — elas não voltam, e o motivo pesa nas
+              próximas.
+            </>
+          )}
         </div>
       </div>
 
@@ -104,13 +116,14 @@ export default async function Hoje() {
               </div>
               <div className="sep" />
               <Barras score={score} />
-              <div style={{ marginTop: 10 }}>
+              <div className="acoes">
                 <Link className="btn p" href={`/jornal#${item.id}`}>
                   Abrir no Jornal
-                </Link>{" "}
+                </Link>
                 <a className="btn" href={item.url} target="_blank" rel="noreferrer noopener">
                   Ver na fonte
                 </a>
+                <Recusar id={item.id} titulo={item.titulo} />
               </div>
             </article>
           ))}

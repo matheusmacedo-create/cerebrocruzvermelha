@@ -3,6 +3,21 @@ import { carregarAcervo } from "@/dados/acervo";
 import { CONTAS } from "@/core/contas";
 import { temToken, KV_STORE } from "@/apify/cliente";
 
+/** Quantos perfis o Instagram deixou passar, nas últimas coletas. */
+function resumoBloqueio(registros: { quando: string; pedidos: number; responderam: number }[]) {
+  if (registros.length === 0) return { coletas: 0, nota: "sem histórico ainda" };
+  const ultimas = registros.slice(0, 20);
+  const pedidos = ultimas.reduce((n, r) => n + r.pedidos, 0);
+  const ok = ultimas.reduce((n, r) => n + r.responderam, 0);
+  return {
+    coletas: ultimas.length,
+    perfisPedidos: pedidos,
+    perfisQueResponderam: ok,
+    taxaDeSucesso: pedidos ? `${Math.round((ok / pedidos) * 100)}%` : "—",
+    ultima: ultimas[0],
+  };
+}
+
 /**
  * Estado de uma variável de ambiente, sem revelar o valor.
  *
@@ -40,5 +55,8 @@ export async function GET() {
     geradoEm: acervo.gerado_em,
     totais: acervo.totais,
     fontesFora: acervo.saude.filter((s) => !s.ok).map((s) => s.fonte),
+    // Taxa de bloqueio do Instagram nas últimas coletas. É o número que diz
+    // se vale mudar cadência ou trocar de actor — não a impressão da última run.
+    bloqueio: resumoBloqueio(acervo.bloqueio ?? []),
   });
 }

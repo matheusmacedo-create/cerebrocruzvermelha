@@ -10,14 +10,12 @@
  * Idempotente — rodar de novo atualiza o que existe em vez de duplicar.
  * Rode sempre que a lista fechada mudar, para as Tasks acompanharem.
  */
-import { AGENDA, CADENCIAS, FUSO, inputInstagram, type Cadencia } from "../src/apify/input";
+import { FUSO, todosOsLotes } from "../src/apify/input";
 import { ACTOR_INSTAGRAM } from "../src/apify/cliente";
 
 const BASE = "https://api.apify.com/v2";
 const dry = process.argv.includes("--dry");
 const token = process.env.APIFY_TOKEN;
-
-const nomeTask = (c: Cadencia) => `cerebro-cvrj-${c.replace(/_/g, "-")}`;
 
 async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${caminho}`, {
@@ -25,7 +23,10 @@ async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   if (!r.ok) throw new Error(`Apify ${r.status} em ${init?.method ?? "GET"} ${caminho}: ${(await r.text()).slice(0, 300)}`);
-  return (await r.json()) as T;
+  // DELETE responde 204 sem corpo: ler JSON aí quebra numa chamada que deu certo.
+  if (r.status === 204) return undefined as T;
+  const texto = await r.text();
+  return (texto ? JSON.parse(texto) : undefined) as T;
 }
 
 interface Nomeado { id: string; name: string }
@@ -39,22 +40,18 @@ async function main() {
   const tasksExistentes = dry ? [] : (await api<{ data: { items: Nomeado[] } }>("/actor-tasks?limit=1000")).data.items;
   const agendasExistentes = dry ? [] : (await api<{ data: { items: Nomeado[] } }>("/schedules?limit=1000")).data.items;
 
-  for (const cadencia of CADENCIAS) {
-    const nome = nomeTask(cadencia);
-    const input = inputInstagram(cadencia);
-    const agenda = AGENDA[cadencia];
+  const lotes = todosOsLotes();
+  console.log(`${lotes.length} runs por ciclo, espalhadas pelo dia. Menos runs por janela = menos bloqueio do Instagram.\n`);
 
-    if (input.username.length === 0) {
-      console.log(`· ${nome}: nenhuma conta com handle confirmado nesta cadência. Pulando.`);
-      continue;
-    }
+  for (const lote of lotes) {
+    const { nome, input, cron, descricao } = lote;
+    if (input.username.length === 0) continue;
 
-    console.log(`\n── ${nome} ──`);
-    console.log(`   ${input.username.length} perfis · ${agenda.descricao} · busca ${input.onlyPostsNewerThan} para trás`);
+    console.log(`── ${nome} ──`);
+    console.log(`   ${input.username.length} perfis · ${descricao} · busca ${input.onlyPostsNewerThan} para trás`);
     console.log(`   ${input.username.join(", ")}`);
     if (dry) continue;
 
-    // ── Task ────────────────────────────────────────────────────────────
     const jaExiste = tasksExistentes.find((t) => t.name === nome);
     const corpo = {
       actId: ACTOR_INSTAGRAM.replace("/", "~"),
@@ -67,22 +64,39 @@ async function main() {
       : (await api<{ data: Nomeado }>("/actor-tasks", { method: "POST", body: JSON.stringify(corpo) })).data;
     console.log(`   task ${jaExiste ? "atualizada" : "criada"}: ${task.id}`);
 
-    // ── Schedule ────────────────────────────────────────────────────────
     const nomeAgenda = `${nome}-agenda`;
     const agendaExistente = agendasExistentes.find((s) => s.name === nomeAgenda);
     const corpoAgenda = {
       name: nomeAgenda,
-      cronExpression: agenda.cron,
+      cronExpression: cron,
       timezone: FUSO,
       isEnabled: true,
       isExclusive: true,
-      description: `Coleta do Cérebro CVRJ — ${cadencia.replace(/_/g, " ")}, ${agenda.descricao}.`,
+      description: `Coleta do Cérebro CVRJ — ${descricao}.`,
       actions: [{ type: "RUN_ACTOR_TASK", actorTaskId: task.id }],
     };
     const ag = agendaExistente
       ? (await api<{ data: Nomeado }>(`/schedules/${agendaExistente.id}`, { method: "PUT", body: JSON.stringify(corpoAgenda) })).data
       : (await api<{ data: Nomeado }>("/schedules", { method: "POST", body: JSON.stringify(corpoAgenda) })).data;
-    console.log(`   agenda ${agendaExistente ? "atualizada" : "criada"}: ${ag.id} (${agenda.cron} ${FUSO})`);
+    console.log(`   agenda ${agendaExistente ? "atualizada" : "criada"}: ${ag.id} (${cron})\n`);
+  }
+
+  // Tasks e agendas de uma divisão anterior ficariam rodando em paralelo,
+  // dobrando a coleta e o bloqueio. São removidas — a agenda primeiro, porque
+  // a Apify recusa apagar uma task que ainda tem agenda apontando para ela.
+  if (!dry) {
+    const vivos = new Set(lotes.map((l) => l.nome));
+    for (const a of agendasExistentes) {
+      const alvo = a.name.replace(/-agenda$/, "");
+      if (!a.name.startsWith("cerebro-cvrj-") || vivos.has(alvo)) continue;
+      await api(`/schedules/${a.id}`, { method: "DELETE" }).catch((e) => console.log(`   ! agenda ${a.name}: ${e}`));
+      console.log(`   agenda obsoleta removida: ${a.name}`);
+    }
+    for (const t of tasksExistentes) {
+      if (!t.name.startsWith("cerebro-cvrj-") || vivos.has(t.name)) continue;
+      await api(`/actor-tasks/${t.id}`, { method: "DELETE" }).catch((e) => console.log(`   ! task ${t.name}: ${e}`));
+      console.log(`   task obsoleta removida: ${t.name}`);
+    }
   }
 
   console.log(dry ? "\n--dry: nada foi enviado para a Apify." : "\nPronto. Falta apontar o webhook — veja npm run webhook.");

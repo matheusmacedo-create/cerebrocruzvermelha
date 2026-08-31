@@ -5,7 +5,8 @@ import { planoDeCanais, proibicoes } from "@/core/canais";
 import { direitoDe, podePublicar } from "@/core/direito";
 import { MODO_ROTULO } from "@/core/mente";
 import { VERSAO_CONTRATO } from "@/core/contrato";
-import { agrupar } from "@/core/agrupar";
+import { agrupar, diversificar } from "@/core/agrupar";
+import { lerRecusas } from "@/dados/feedback";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,9 @@ export async function GET(req: Request) {
   const limite = Math.min(Number(url.searchParams.get("limite") ?? 20) || 20, 100);
 
   const acervo = await carregarAcervo();
-  let pontuados = agrupar(pontuar(acervo.itens, { hoje: acervo.hoje }));
+  // A Redação nunca deve receber pauta que a equipe já recusou aqui.
+  const recusados = await lerRecusas();
+  let pontuados = diversificar(agrupar(pontuar(acervo.itens, { hoje: acervo.hoje, recusados })));
 
   if (id) pontuados = pontuados.filter((p) => p.item.id === id);
   else if (modo) pontuados = pontuados.filter((p) => p.score.modo === modo);
