@@ -27,6 +27,20 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+
+  // A Redação consome isto de outro domínio: caminho relativo não resolveria
+  // lá. A origem sai da própria requisição para não depender de configuração.
+  const origem = `${url.protocol}//${url.host}`;
+
+  // Quando há segredo configurado, o contrato deixa de ser público: o
+  // raciocínio editorial da filial não precisa ficar aberto na internet.
+  const segredo = process.env.PAUTA_TOKEN;
+  if (segredo) {
+    const auth = req.headers.get("authorization");
+    if (auth !== `Bearer ${segredo}`) {
+      return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
+    }
+  }
   const id = url.searchParams.get("id");
   const modo = url.searchParams.get("modo");
   const limite = Math.min(Number(url.searchParams.get("limite") ?? 20) || 20, 100);
@@ -77,7 +91,10 @@ export async function GET(req: Request) {
       },
       midia: item.midia
         ? {
-            url: item.midia.url,
+            // Servida pelo cache do Cérebro: a URL da CDN do Instagram expira
+            // em dias e a Redação guardaria um link morto.
+            url: `${origem}/api/midia/${item.id}`,
+            urlOriginal: item.midia.url,
             formato: item.midia.formato,
             tipo: item.midia.tipo,
             direito: d,
@@ -93,6 +110,8 @@ export async function GET(req: Request) {
       },
       canais: planoDeCanais(item, score),
       proibido: proibicoes(item),
+      // Link de volta para a triagem, para quem quiser ver o raciocínio inteiro.
+      urlNoCerebro: `${origem}/jornal#${item.id}`,
     };
   });
 

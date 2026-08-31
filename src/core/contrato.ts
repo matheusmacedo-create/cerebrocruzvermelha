@@ -4,4 +4,11 @@
  * A Redação depende deste formato. Mudança que quebre consumidor sobe a
  * versão maior; campo novo e opcional sobe a menor.
  */
-export const VERSAO_CONTRATO = "1.0";
+export const VERSAO_CONTRATO = "1.1";
+
+/*
+ * 1.1 — a mídia passa a vir como URL absoluta servida pelo Cérebro
+ *       (`midia.url`), com a original da fonte em `midia.urlOriginal`, e cada
+ *       pauta ganha `urlNoCerebro`. Campos novos e opcionais: quem consome a
+ *       1.0 continua funcionando.
+ */
