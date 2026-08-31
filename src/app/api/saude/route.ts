@@ -39,7 +39,7 @@ export const dynamic = "force-dynamic";
 
 /** Diagnóstico rápido: de onde o Cérebro está lendo agora. */
 export async function GET() {
-  const acervo = await carregarAcervo();
+  const acervo = await carregarAcervo(true);
   return NextResponse.json({
     ok: true,
     origem: acervo.origem,

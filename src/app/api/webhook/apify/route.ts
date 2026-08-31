@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import { ACTOR_INSTAGRAM, CHAVE_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "@/apify/cliente";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { ACTOR_INSTAGRAM, CHAVE_ACERVO, ETIQUETA_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "@/apify/cliente";
 import { perfisBloqueados, postsParaItens, saudeDaColeta, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
 import { chavesGuardadas, guardarMidias, podarMidia } from "@/apify/midia";
@@ -67,6 +67,10 @@ export async function POST(req: Request) {
     ).catch(() => ({ guardadas: 0, falhas: 0, semMidia: 0, jaTinham: 0 }));
     const podadas = await podarMidia(new Set(snapshot.itens.map((i) => i.id))).catch(() => 0);
 
+    // A etiqueta derruba a leitura do acervo; sem ela as páginas
+    // re-renderizam lendo o mesmo snapshot velho do cache de fetch.
+    // O segundo argumento é o perfil de cacheLife, exigido no Next 16.
+    revalidateTag(ETIQUETA_ACERVO, { expire: 0 });
     for (const p of ["/", "/jornal", "/acervo", "/calendario", "/fontes"]) revalidatePath(p);
 
     // O Instagram bloqueia perfis de forma intermitente e o actor desiste na

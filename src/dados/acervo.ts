@@ -37,10 +37,15 @@ const SEMENTE: Omit<Acervo, "origem"> = (() => {
   };
 })();
 
-export async function carregarAcervo(): Promise<Acervo> {
+/**
+ * `fresco` pula o cache. As telas leem do cache; o diagnóstico não, porque
+ * um painel de saúde que mostra estado de 15 minutos atrás engana quem está
+ * justamente tentando descobrir se a coleta funcionou.
+ */
+export async function carregarAcervo(fresco = false): Promise<Acervo> {
   if (temToken() && KV_STORE) {
     try {
-      const kv = await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO);
+      const kv = await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, fresco);
       if (kv?.itens?.length) return { ...kv, origem: "apify" };
     } catch (e) {
       // Uma falha da Apify nunca derruba a tela. Ela cai para a semente

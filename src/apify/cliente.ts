@@ -99,11 +99,17 @@ export async function lerDataset<T>(datasetId: string, limite = 1000): Promise<T
  * as que são geradas estaticamente falham e caem para a semente — servindo
  * dado velho para sempre, em silêncio. O webhook pede `fresco` porque acabou
  * de gravar e precisa enxergar o que gravou.
+ *
+ * A etiqueta é o que deixa a coleta derrubar esse cache: `revalidatePath`
+ * invalida a página, não a chamada de fetch dentro dela, então sem
+ * `revalidateTag` a tela renderiza de novo lendo o mesmo acervo velho.
  */
+export const ETIQUETA_ACERVO = "acervo";
+
 export async function lerKV<T>(storeId: string, chave: string, fresco = false): Promise<T | null> {
   const r = await fetch(`${BASE}/key-value-stores/${storeId}/records/${chave}`, {
     headers: { Authorization: `Bearer ${token()}` },
-    ...(fresco ? { cache: "no-store" as const } : { next: { revalidate: 900 } }),
+    ...(fresco ? { cache: "no-store" as const } : { next: { revalidate: 900, tags: [ETIQUETA_ACERVO] } }),
   });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`Apify KV ${r.status} ao ler ${chave}`);
