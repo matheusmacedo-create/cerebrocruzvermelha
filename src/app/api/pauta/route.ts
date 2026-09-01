@@ -7,6 +7,7 @@ import { MODO_ROTULO } from "@/core/mente";
 import { VERSAO_CONTRATO } from "@/core/contrato";
 import { agrupar, diversificar } from "@/core/agrupar";
 import { lerRecusas } from "@/dados/feedback";
+import { lerContextoDaRedacao } from "@/dados/redacao";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,16 @@ export async function GET(req: Request) {
   const modo = url.searchParams.get("modo");
   const limite = Math.min(Number(url.searchParams.get("limite") ?? 20) || 20, 100);
 
-  const acervo = await carregarAcervo();
-  // A Redação nunca deve receber pauta que a equipe já recusou aqui.
-  const recusados = await lerRecusas();
-  let pontuados = diversificar(agrupar(pontuar(acervo.itens, { hoje: acervo.hoje, recusados })));
+  // A Redação nunca deve receber pauta que a equipe já recusou aqui — e o
+  // que ela publicou ou registrou volta como contexto (fase 2 do contrato).
+  const [acervo, recusados, daRedacao] = await Promise.all([
+    carregarAcervo(),
+    lerRecusas(),
+    lerContextoDaRedacao(),
+  ]);
+  let pontuados = diversificar(
+    agrupar(pontuar(acervo.itens, { hoje: acervo.hoje, recusados, ...daRedacao })),
+  );
 
   if (id) pontuados = pontuados.filter((p) => p.item.id === id);
   else if (modo) pontuados = pontuados.filter((p) => p.score.modo === modo);

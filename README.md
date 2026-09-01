@@ -13,7 +13,7 @@ Construído separado, para depois integrar à Redação pelo contrato em
 
 ## O que ele faz
 
-1. **Observa** uma lista fechada de 23 contas (Instagram e X) e as fontes
+1. **Observa** uma lista fechada de 26 contas (Instagram e X) e as fontes
    documentais — RSS, APIs e diários oficiais.
 2. **Entende** cada sinal por seis perguntas, com nota de 0 a 100 e o porquê escrito.
 3. **Decide** entre agir agora, produzir, agendar, avaliar, monitorar ou arquivar.
@@ -116,7 +116,11 @@ docs/           arquitetura, Apify e integração com a Redação
 
 `GET /api/pauta` devolve as pautas que passaram do corte, cada uma com o
 raciocínio, o plano por canal e `midia.podePublicar` — a trava explícita no
-contrato. Detalhes em [`docs/INTEGRACAO-REDACAO.md`](docs/INTEGRACAO-REDACAO.md).
+contrato. O laço volta fechado: a Redação devolve as recusas com motivo em
+`/api/feedback` e, com `REDACAO_URL` configurada, o Cérebro lê de lá o que a
+Casa já publicou e as ações do Registrar — os dois dados que faltavam para o
+ineditismo e a ação real. Detalhes em
+[`docs/INTEGRACAO-REDACAO.md`](docs/INTEGRACAO-REDACAO.md).
 
 ## Documentação
 

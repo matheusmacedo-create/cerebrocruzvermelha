@@ -3,6 +3,7 @@ import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { CATEGORIAS, resolverConta } from "@/core/contas";
 import { CartaoJornal } from "@/ui/CartaoJornal";
 import { agrupar } from "@/core/agrupar";
+import { lerContextoDaRedacao } from "@/dados/redacao";
 
 // 15 minutos. Precisa ser literal: o Next lê isto estaticamente.
 export const revalidate = 900;
@@ -17,8 +18,10 @@ type Busca = { categoria?: string; veredito?: string };
  */
 export default async function Jornal({ searchParams }: { searchParams: Promise<Busca> }) {
   const { categoria, veredito } = await searchParams;
-  const acervo = await carregarAcervo();
-  const ctx = { hoje: acervo.hoje };
+  // O contexto da Redação (fase 2): o que já foi publicado e as ações do
+  // Registrar mudam as notas de ineditismo e de ação real na triagem.
+  const [acervo, daRedacao] = await Promise.all([carregarAcervo(), lerContextoDaRedacao()]);
+  const ctx = { hoje: acervo.hoje, ...daRedacao };
 
   let pontuados = agrupar(pontuar(acervo.itens, ctx));
   if (categoria) {
