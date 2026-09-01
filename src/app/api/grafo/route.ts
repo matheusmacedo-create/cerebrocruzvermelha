@@ -39,6 +39,9 @@ interface No {
   agrupados?: number;
   recusado?: string;
   dias?: number;
+  /** Ids dos boletins recolhidos neste sinal: a Redação importa pelo id de
+   *  qualquer membro da família, e o mapa precisa reencontrar o chefe. */
+  recolhidos?: string[];
 }
 
 interface Aresta {
@@ -115,7 +118,7 @@ export async function GET(req: Request) {
     ),
   );
 
-  for (const { item, score, semelhantes } of sinais) {
+  for (const { item, score, semelhantes, recolhidos } of sinais) {
     const s = score as Score & { eixo?: Eixo };
     const idSinal = `sinal:${item.id}`;
     no({
@@ -129,6 +132,7 @@ export async function GET(req: Request) {
       url: `${origem}/jornal#${item.id}`,
       agrupados: semelhantes || undefined,
       recusado: recusaPorId.get(item.id),
+      recolhidos: recolhidos.length > 0 ? recolhidos.map((r) => r.id) : undefined,
     });
 
     // Quem publicou: conta da lista fechada, ou a fonte documental como nó
@@ -147,32 +151,49 @@ export async function GET(req: Request) {
     if (s.eixo && score.relacao >= 25) liga(idSinal, `eixo:${s.eixo}`, "encosta");
   }
 
+  // O `dias` do snapshot congelou no momento da coleta; servido dias depois,
+  // ele deixaria data vencida passar por futura. O agora é o da requisição.
+  const agora = Date.now();
+  const diasAte = (data: string, congelado: number | null): number => {
+    const t = Date.parse(data);
+    if (!Number.isNaN(t)) return Math.round((t - agora) / 86_400_000);
+    return typeof congelado === "number" && Number.isFinite(congelado) ? congelado : Number.NaN;
+  };
+
   // Calendário: só o que ainda está pela frente. Data passada é memória do
   // Acervo, não ligação viva do mapa.
   for (const d of acervo.calendario) {
-    if (d.dias < 0) continue;
-    no({
-      id: `data:${d.data}`,
-      tipo: "data",
-      rotulo: d.titulo,
-      quando: d.data,
-      dias: d.dias,
-      url: d.url || undefined,
-    });
-    if (d.eixo in EIXOS) liga(`data:${d.data}`, `eixo:${d.eixo}`, "marca");
+    const dias = diasAte(d.data, d.dias);
+    if (dias < 0) continue;
+    const id = `data:${d.data}`;
+    if (ids.has(id)) {
+      // Duas efemérides no mesmo dia são o mesmo nó: sumir com a segunda
+      // esconderia compromisso, e nó por evento quebraria o vínculo das
+      // propostas, que ligam pela data.
+      const existente = nos.find((n) => n.id === id);
+      if (existente) existente.rotulo = cortar(`${existente.rotulo} · ${d.titulo}`, 140);
+    } else {
+      no({ id, tipo: "data", rotulo: d.titulo, quando: d.data, dias, url: d.url || undefined });
+    }
+    if (d.eixo in EIXOS) liga(id, `eixo:${d.eixo}`, "marca");
   }
 
   for (const p of acervo.propostas) {
+    // Na semente há propostas sem data marcada (data e dias nulos): elas
+    // continuam sugerindo — penduradas só no eixo — e não carregam `dias`.
+    const dias = p.data ? diasAte(p.data, p.dias) : Number.NaN;
+    // Proposta é sugestão de futuro; com a data vencida ela já não sugere.
+    if (Number.isFinite(dias) && dias < 0) continue;
     no({
       id: `proposta:${p.id}`,
       tipo: "proposta",
       rotulo: cortar(p.titulo, TETO_ROTULO),
       modo: p.modo,
       modoRotulo: MODO_ROTULO[p.modo],
-      dias: p.dias,
+      dias: Number.isFinite(dias) ? dias : undefined,
     });
     liga(`proposta:${p.id}`, `eixo:${p.eixo}`, "sugere");
-    liga(`proposta:${p.id}`, `data:${p.data}`, "sugere");
+    if (p.data) liga(`proposta:${p.id}`, `data:${p.data}`, "sugere");
   }
 
   return NextResponse.json(
