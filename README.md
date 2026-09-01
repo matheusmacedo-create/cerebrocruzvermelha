@@ -13,7 +13,7 @@ Construído separado, para depois integrar à Redação pelo contrato em
 
 ## O que ele faz
 
-1. **Observa** uma lista fechada de 23 contas (Instagram e X) e as fontes
+1. **Observa** uma lista fechada de 26 contas (Instagram e X) e as fontes
    documentais — RSS, APIs e diários oficiais.
 2. **Entende** cada sinal por seis perguntas, com nota de 0 a 100 e o porquê escrito.
 3. **Decide** entre agir agora, produzir, agendar, avaliar, monitorar ou arquivar.

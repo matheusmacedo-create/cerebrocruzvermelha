@@ -294,6 +294,34 @@ export const CONTAS: Conta[] = [
     cuidado: "FILTRO DE DATA OBRIGATÓRIO. Repost antigo sem data explícita não entra.",
   },
   {
+    id: "cvb-mg",
+    nome: "Cruz Vermelha Brasileira — Filial MG",
+    categoria: "movimento",
+    vinculo: "movimento",
+    eixos: ["institucional", "grd", "saude"],
+    instagram: "@cruzvermelhabrasileiramg",
+    instagramStatus: "confirmado",
+    cadencia: "3_dias",
+    porque:
+      "Filial irmã com operação forte em desastre (Brumadinho, chuvas). Referência de pauta e de resposta.",
+    cuidado:
+      "FILTRO DE DATA OBRIGATÓRIO. E ação de MG é ação de MG: vira referência, nunca balanço da filial RJ.",
+  },
+  {
+    id: "cvb-sp",
+    nome: "Cruz Vermelha Brasileira — Filial SP",
+    categoria: "movimento",
+    vinculo: "movimento",
+    eixos: ["institucional", "saude", "voluntariado"],
+    instagram: "@cruzvermelhasaopaulo",
+    instagramStatus: "confirmado",
+    cadencia: "3_dias",
+    porque:
+      "Filial irmã de maior volume no Sudeste. Mostra o que o movimento publica e o que performa.",
+    cuidado:
+      "FILTRO DE DATA OBRIGATÓRIO. E ação de SP é ação de SP: vira referência, nunca balanço da filial RJ.",
+  },
+  {
     id: "ifrc",
     nome: "IFRC — Federação Internacional",
     categoria: "movimento",
@@ -303,6 +331,18 @@ export const CONTAS: Conta[] = [
     instagramStatus: "confirmado",
     cadencia: "10_dias",
     porque: "Movimento global. Só entra se citar Brasil ou se for data oficial do movimento.",
+  },
+  {
+    id: "cicv",
+    nome: "CICV — Comitê Internacional da Cruz Vermelha",
+    categoria: "movimento",
+    vinculo: "movimento",
+    eixos: ["institucional", "grd"],
+    instagram: "@cicv_oficial",
+    instagramStatus: "confirmado",
+    cadencia: "10_dias",
+    porque:
+      "O braço do movimento em conflito e violência armada — o mandato que encosta no trabalho da filial em território. Só entra se citar Brasil ou data oficial do movimento.",
   },
 ];
 
@@ -314,7 +354,7 @@ export const CATEGORIAS: Record<string, { rotulo: string; descricao: string }> =
   territorio: { rotulo: "Território", descricao: "Mídia comunitária. O impacto aparece aqui primeiro." },
   seguranca: { rotulo: "Segurança operacional", descricao: "Uso interno. Protege a equipe de campo." },
   mobilidade: { rotulo: "Mobilidade", descricao: "Uso interno. Voluntário e doação chegam ou não chegam." },
-  movimento: { rotulo: "Casa e movimento", descricao: "A filial, a nacional e a Federação." },
+  movimento: { rotulo: "Casa e movimento", descricao: "A filial, as irmãs, a nacional e o movimento internacional." },
 };
 
 /** Contas cujo conteúdo nunca vira peça pública — só alimentam decisão interna. */
