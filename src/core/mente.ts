@@ -1,6 +1,6 @@
 import type { Conta, Eixo, Item, Modo, Recusa, Score, Veredito } from "./tipos";
 import { SOMENTE_INTERNO, contaPorHandle, resolverConta } from "./contas";
-import { ACAO_REAL, EIXO_TERMOS, PECA_VELHA, RJ, URGENTE, bate, conta as contaTermos } from "./lexico";
+import { ACAO_REAL, EIXO_TERMOS, PECA_VELHA, RJ, URGENTE, bate, conta as contaTermos, gabaritoOperacional } from "./lexico";
 
 /**
  * O motor de decisão.
@@ -128,6 +128,17 @@ export function decidir(item: Item, ctx: ContextoDecisao): Score {
   if (ineditismo < 20) {
     porque.push("A Casa já falou disso. Repetir gancho gasta audiência.");
     total = Math.min(total, 40);
+  }
+  // Boletim operacional é perecível: "TEMPO AGORA" e "FAIXA LIBERADA" de
+  // dois dias atrás são histórico, não pauta — sem esta trava eles seguem
+  // disputando a tela de atenção por dias, que é o ruído que o Cérebro
+  // existe para tirar da frente.
+  if (perecivel(item)) {
+    const horas = idadeEmHoras(item.quando);
+    if (horas !== null && horas > 48) {
+      porque.push("Boletim operacional com mais de 48h. Já virou histórico: fica no acervo, não na atenção.");
+      total = Math.min(total, 30);
+    }
   }
 
   const modo = modoDe(total, urgencia, acaoReal);
@@ -298,6 +309,12 @@ function vereditoDe(modo: Modo): Veredito {
   if (modo === "agendar" || modo === "avaliar") return "quase";
   if (modo === "monitorar") return "nao";
   return "nao";
+}
+
+/** Sinal que perde valor em horas: boletim de tempo/trânsito e aviso meteorológico. */
+function perecivel(item: Item): boolean {
+  if (item.tipo === "aviso_meteorologico" || item.tipo === "pluviometria") return true;
+  return gabaritoOperacional(item.titulo) !== null;
 }
 
 export function idadeEmHoras(quando: string): number | null {

@@ -15,6 +15,17 @@ import { SEMENTE } from "./acervo";
 export const TETO_ITENS_REDE = 400;
 
 /**
+ * Janela e teto dos sinais documentais.
+ *
+ * Com a coleta documental viva (INMET, diários, RSS), esses itens também
+ * passam a crescer por run — e um aviso meteorológico de três semanas atrás
+ * é ruído, não memória útil. O calendário nunca entra na poda: compromisso
+ * não vence com a coleta.
+ */
+export const JANELA_DOCUMENTAL_DIAS = 30;
+export const TETO_ITENS_DOCUMENTAIS = 350;
+
+/**
  * Monta o snapshot que vai para o Key-Value Store.
  *
  * Os sinais novos do Instagram entram por cima do acervo existente,
@@ -38,19 +49,35 @@ export function montarAcervo(opcoes: {
   // O sinal recém-coletado ganha do antigo: métrica e legenda mudam.
   for (const it of opcoes.novos) porId.set(it.id, it);
 
+  // A relevância acompanha o motor de hoje, não a da coleta que gravou o
+  // item: um boletim que envelheceu ou um gancho que a Casa já publicou
+  // precisa cair de faixa também no acervo.
   const todos = [...porId.values()].map((item) => {
-    if (item.plataforma !== "instagram") return item;
     const s = decidir(item, ctx);
     return { ...item, rel: relevanciaDe(s.total) };
   });
 
-  // Aplica o teto só na parte que cresce a cada coleta, mantendo os mais recentes.
+  // Teto na parte que cresce a cada coleta, mantendo os mais recentes.
   const daRede = todos.filter((i) => i.plataforma === "instagram" || i.plataforma === "x");
-  const resto = todos.filter((i) => !(i.plataforma === "instagram" || i.plataforma === "x"));
   const recentes = daRede
     .sort((a, b) => (Date.parse(b.quando) || 0) - (Date.parse(a.quando) || 0))
     .slice(0, TETO_ITENS_REDE);
-  const itens = [...recentes, ...resto];
+
+  // Documentais agora também são recoletados: janela de 30 dias e teto,
+  // preservando sempre o calendário e o que não tem data confiável.
+  const corte = Date.now() - JANELA_DOCUMENTAL_DIAS * 86_400_000;
+  const documentais = todos.filter((i) => !(i.plataforma === "instagram" || i.plataforma === "x"));
+  const doCalendario = documentais.filter((i) => i.grupo === "calendario");
+  const naJanela = documentais
+    .filter((i) => i.grupo !== "calendario")
+    .filter((i) => {
+      const t = Date.parse(i.quando);
+      return Number.isNaN(t) || t >= corte;
+    })
+    .sort((a, b) => (Date.parse(b.quando) || 0) - (Date.parse(a.quando) || 0))
+    .slice(0, TETO_ITENS_DOCUMENTAIS);
+
+  const itens = [...recentes, ...naJanela, ...doCalendario];
 
   const saude = [...(base.saude ?? []), ...(opcoes.saudeColeta ?? [])];
   // Uma fonte recoletada substitui a leitura anterior.

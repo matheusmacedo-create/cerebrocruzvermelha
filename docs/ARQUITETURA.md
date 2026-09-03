@@ -39,6 +39,18 @@ rede, ou a leitura falhou. O rodapé de toda tela diz qual das duas está no ar 
 uma falha silenciosa que faz a equipe trabalhar sobre dado velho seria pior que
 uma tela quebrada.
 
+`documentais.ts` é a metade não-Instagram da coleta: INMET (filtrado para o
+RJ), DOM Rio, IFRC GO, Agência Brasil e a pluviometria do Alerta Rio. Ela pega
+carona em todo webhook da Apify — sem cron próprio — e cada fonte falha
+sozinha, virando saúde visível na tela de Fontes. Antes dela, essas fontes
+viviam congeladas no acervo semente e a tela reciclava aviso meteorológico de
+outra região como se fosse novidade. `GET /api/coleta?documentais=1` (com o
+`CRON_SECRET`) força uma leitura manual. Diário sem edição no dia — domingo,
+feriado — não é falha; boletim de tempo e de trânsito com mais de 48h cai
+para o acervo (trava de perecibilidade em `mente.ts`), e o agrupamento junta
+boletim pelo serviço (tempo, trânsito), não pela manchete do dia
+(`gabaritoOperacional` em `lexico.ts`).
+
 **`src/app/`** são as telas e as rotas. Nenhuma regra de decisão mora aqui.
 
 ## Por que regras e não um modelo

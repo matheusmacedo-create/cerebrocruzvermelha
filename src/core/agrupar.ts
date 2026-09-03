@@ -1,6 +1,6 @@
 import type { Item, Score } from "./tipos";
 import { resolverConta } from "./contas";
-import { normalizar } from "./lexico";
+import { gabaritoOperacional, normalizar } from "./lexico";
 
 /**
  * O Cérebro agrupa.
@@ -41,15 +41,35 @@ export interface Agrupado {
  */
 const MIN_PALAVRAS_CAIXA_ALTA = 2;
 
+/**
+ * O gabarito muda de manchete todo dia — "SEGUNDA-FEIRA (31/8) COM…",
+ * "TERÇA (1/9) COMEÇA…" — e a assinatura não pode mudar junto. Dia da
+ * semana, período do dia e palavra de ligação saem antes de assinar.
+ */
+const PALAVRAS_DE_CALENDARIO = new Set([
+  "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo", "feira",
+  "noite", "manha", "tarde", "madrugada", "hoje", "amanha", "fim", "semana",
+  "de", "da", "do", "das", "dos", "com", "e", "no", "na", "nos", "nas", "em",
+]);
+
 export function familia(item: Item): string | null {
   const conta = resolverConta(item);
   if (!conta) return null;
+
+  // Boletim de serviço agrupa pelo serviço, não pela manchete: "TEMPO
+  // AGORA", "NOITE DE TERÇA COM PANCADAS" e "BOLETIM DE VENTOS" são o mesmo
+  // gabarito de tempo; "ATUALIZAÇÃO | FAIXA LIBERADA" e "TÚNEL REBOUÇAS |
+  // ACIDENTE" são o mesmo gabarito de trânsito. O representante segue sendo
+  // o de maior nota, então uma escalada continua aparecendo.
+  const gabarito = gabaritoOperacional(item.titulo);
+  if (gabarito) return `${conta.id}::${gabarito}`;
 
   const palavras = item.titulo.trim().split(/\s+/);
   const abertura: string[] = [];
   for (const p of palavras) {
     if (p === "|") break;
-    const letras = p.replace(/[^\p{L}]/gu, "");
+    // O ordinal de "(1º/9)" é letra para o Unicode, mas é data, não palavra.
+    const letras = p.replace(/[ºª]/gu, "").replace(/[^\p{L}]/gu, "");
     // Palavra só de números ou pontuação — "(31/8)" — não quebra a sequência.
     if (letras.length === 0) continue;
     if (letras.length < 2 || letras !== letras.toLocaleUpperCase("pt-BR")) break;
@@ -57,7 +77,12 @@ export function familia(item: Item): string | null {
   }
   if (abertura.length < MIN_PALAVRAS_CAIXA_ALTA) return null;
 
-  const chave = normalizar(abertura.slice(0, 2).join(" "));
+  const significativas = abertura
+    .map((p) => normalizar(p))
+    .filter((p) => !PALAVRAS_DE_CALENDARIO.has(p));
+  const chave = (significativas.length >= 2 ? significativas : abertura.map((p) => normalizar(p)))
+    .slice(0, 2)
+    .join(" ");
   return `${conta.id}::${chave}`;
 }
 
