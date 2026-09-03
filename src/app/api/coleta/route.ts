@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
-import { ACTOR_INSTAGRAM, rodarActor, temToken } from "@/apify/cliente";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { ACTOR_INSTAGRAM, CHAVE_ACERVO, ETIQUETA_ACERVO, KV_STORE, gravarKV, lerKV, rodarActor, temToken } from "@/apify/cliente";
 import { inputInstagram, type Cadencia } from "@/apify/input";
+import { coletarDocumentais } from "@/dados/documentais";
+import { montarAcervo } from "@/dados/montar";
+import type { Acervo } from "@/core/tipos";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const CADENCIAS: Cadencia[] = ["tempo_real", "diario", "3_dias", "10_dias"];
 
@@ -23,6 +28,28 @@ export async function GET(req: Request) {
   if (!autorizado(req)) {
     return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
   }
+
+  // ?documentais=1 força só a leitura das fontes documentais (INMET,
+  // diários, RSS) e regrava o snapshot — sem gastar crédito da Apify. A
+  // rotina delas é pegar carona no webhook; isto é o botão manual.
+  if (url.searchParams.get("documentais") === "1") {
+    if (!temToken() || !KV_STORE) {
+      return NextResponse.json({ erro: "Apify não configurada (o snapshot vive no KV dela)" }, { status: 503 });
+    }
+    const d = await coletarDocumentais();
+    const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
+    const snapshot = montarAcervo({ novos: d.itens, base, saudeColeta: d.saude });
+    await gravarKV(KV_STORE, CHAVE_ACERVO, snapshot);
+    revalidateTag(ETIQUETA_ACERVO, { expire: 0 });
+    for (const p of ["/", "/jornal", "/acervo", "/calendario", "/fontes"]) revalidatePath(p);
+    return NextResponse.json({
+      ok: true,
+      documentais: d.itens.length,
+      fontes: d.saude.map((s) => ({ fonte: s.fonte, ok: s.ok, itens: s.itens, detalhe: s.detalhe })),
+      total: snapshot.totais.itens,
+    });
+  }
+
   if (!CADENCIAS.includes(cadencia)) {
     return NextResponse.json({ erro: `cadência inválida: ${cadencia}` }, { status: 400 });
   }

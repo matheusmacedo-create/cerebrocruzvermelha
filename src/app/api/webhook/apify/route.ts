@@ -3,10 +3,14 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { ACTOR_INSTAGRAM, CHAVE_ACERVO, ETIQUETA_ACERVO, KV_STORE, gravarKV, lerDataset, lerKV, rodarActor, temToken } from "@/apify/cliente";
 import { perfisBloqueados, postsParaItens, saudeDaColeta, type PostInstagram } from "@/apify/normalizar";
 import { montarAcervo } from "@/dados/montar";
+import { coletarDocumentais } from "@/dados/documentais";
 import { chavesGuardadas, guardarMidias, podarMidia } from "@/apify/midia";
 import type { Acervo } from "@/core/tipos";
 
 export const dynamic = "force-dynamic";
+// A coleta documental soma ~8s de fetches ao webhook; o teto padrão de
+// função serverless cortaria o trabalho no meio.
+export const maxDuration = 60;
 
 interface CorpoWebhook {
   eventType?: string;
@@ -45,14 +49,23 @@ export async function POST(req: Request) {
   }
 
   try {
-    const posts = await lerDataset<PostInstagram>(datasetId, 2000);
+    // A coleta documental (INMET, diários, RSS) pega carona em todo webhook:
+    // é o que mantém metade das fontes viva sem cron próprio. Falha dela
+    // nunca derruba a coleta do Instagram — vira saúde de fonte.
+    const [posts, documentais] = await Promise.all([
+      lerDataset<PostInstagram>(datasetId, 2000),
+      coletarDocumentais().catch((e) => ({
+        itens: [],
+        saude: [{ fonte: "Coleta documental", ok: false, itens: 0, detalhe: String(e).slice(0, 160), url: "" }],
+      })),
+    ]);
     // Posts de contas fora da lista fechada são descartados aqui.
-    const novos = postsParaItens(posts);
+    const novos = [...postsParaItens(posts), ...documentais.itens];
 
     // `fresco`: acabamos de gravar e precisamos mesclar sobre o estado atual.
     const base = (await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, true)) ?? undefined;
     // Perfis que falharam viram saúde de fonte visível na tela de Fontes.
-    const snapshot = montarAcervo({ novos, base, saudeColeta: saudeDaColeta(posts), coleta: {
+    const snapshot = montarAcervo({ novos, base, saudeColeta: [...saudeDaColeta(posts), ...documentais.saude], coleta: {
       pedidos: new Set(posts.map((x) => (x.ownerUsername ?? (x.inputUrl ?? "").replace(/.*instagram\.com\//, "").replace(/\/$/, ""))).filter(Boolean)).size,
       responderam: new Set(posts.filter((x) => x.ownerUsername).map((x) => x.ownerUsername!)).size,
     } });

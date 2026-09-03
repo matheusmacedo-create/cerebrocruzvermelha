@@ -57,6 +57,57 @@ export function normalizar(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+/**
+ * Gabaritos operacionais: tempo e tr\u00e2nsito.
+ *
+ * O COR-Rio e o Alerta Rio publicam o MESMO servi\u00e7o com dezenas de aberturas
+ * \u2014 "TEMPO AGORA", "NOITE DE TER\u00c7A COM\u2026", "QUARTA-FEIRA (2/9) COM\u2026",
+ * "BOLETIM DE VENTOS", "ATUALIZA\u00c7\u00c3O | FAIXA LIBERADA\u2026". Assinar a fam\u00edlia
+ * pelas duas primeiras palavras fragmenta isso em vinte fam\u00edlias e a tela de
+ * aten\u00e7\u00e3o vira um notici\u00e1rio de meteorologia. O que define a fam\u00edlia aqui \u00e9
+ * o servi\u00e7o, n\u00e3o a manchete do dia.
+ */
+export const GABARITO_TEMPO = [
+  "tempo agora", "tempo hoje", "proximos dias", "aviso meteorologico", "previsao",
+  "pancada", "chuva", "chove", "vento", "rajada", "nebulosidade", "frente fria",
+  "ressaca", "pluviom", "temperatura", "umidade", "geada", "vendaval", "tempestade",
+  "granizo", "calor", "ceu ",
+];
+
+export const GABARITO_TRANSITO = [
+  "atualizacao", "faixa", "interdi", "acidente", "liberad", "transito", "brt",
+  "calha", "engarrafamento", "retencao", "desvio", "bloqueio", "enguica",
+  "avenida", "tunel", "elevado", "linha vermelha", "linha amarela", "ponte rio",
+  "estrada", "rodovia", "via expressa", "ciclovia", "vazamento",
+];
+
+/**
+ * A abertura em caixa alta do t\u00edtulo \u2014 o peda\u00e7o "gritado" que caracteriza
+ * boletim. Ignora n\u00fameros, datas, emoji e o separador "|"; para na primeira
+ * palavra com min\u00fascula. Menos de duas palavras n\u00e3o \u00e9 gabarito.
+ */
+export function aberturaDeBoletim(titulo: string): string | null {
+  const abertura: string[] = [];
+  for (const p of titulo.trim().split(/\s+/)) {
+    // O indicador ordinal \u2014 "(1\u00ba/9)" \u2014 \u00e9 letra para o Unicode, mas \u00e9 data,
+    // n\u00e3o palavra: sem tir\u00e1-lo, ele encerraria a abertura no meio.
+    const letras = p.replace(/[\u00ba\u00aa]/gu, "").replace(/[^\p{L}]/gu, "");
+    if (letras.length === 0) continue; // "(31/8)", "|", emoji \u2014 n\u00e3o quebram a sequ\u00eancia
+    if (letras.length < 2 || letras !== letras.toLocaleUpperCase("pt-BR")) break;
+    abertura.push(letras);
+  }
+  return abertura.length >= 2 ? normalizar(abertura.join(" ")) : null;
+}
+
+/** De que servi\u00e7o \u00e9 este boletim \u2014 ou null quando n\u00e3o \u00e9 boletim. */
+export function gabaritoOperacional(titulo: string): "tempo" | "transito" | null {
+  const abertura = aberturaDeBoletim(titulo);
+  if (!abertura) return null;
+  if (GABARITO_TEMPO.some((t) => abertura.includes(t))) return "tempo";
+  if (GABARITO_TRANSITO.some((t) => abertura.includes(t))) return "transito";
+  return null;
+}
+
 /** Quantos termos da lista aparecem no texto. */
 export function conta(texto: string, termos: string[]): number {
   const t = normalizar(texto);
