@@ -35,6 +35,10 @@ export async function GET(req: Request) {
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ erro: "faltou o id do sinal" }, { status: 400 });
   const limite = Math.min(Number(url.searchParams.get("limite") ?? 10) || 10, 20);
+  // A Redação pode mandar os termos que a IA dela extraiu (?q=...): a busca
+  // interna então usa as MESMAS palavras da busca na imprensa, e as duas
+  // metades do painel contam a mesma história.
+  const q = url.searchParams.get("q")?.trim() || null;
 
   const [acervo, recusados, daRedacao] = await Promise.all([
     carregarAcervo(),
@@ -51,35 +55,56 @@ export async function GET(req: Request) {
 
   const contaAlvo = resolverConta(alvo.item)?.id;
   const eixoAlvo = (alvo.score as Score & { eixo?: Eixo }).eixo;
-  const chaves = palavras(alvo.item.titulo);
+  // As chaves saem dos termos da Redação quando vierem; senão, do título e
+  // do começo do resumo do próprio sinal.
+  const chaves = q
+    ? palavras(q)
+    : palavras(`${alvo.item.titulo} ${(alvo.item.resumo ?? "").slice(0, 240)}`);
 
   const candidatos = pontuados
     .filter((p) => p.item.id !== id)
     .map((p) => {
       const conta = resolverConta(p.item)?.id;
       const eixo = (p.score as Score & { eixo?: Eixo }).eixo;
-      const comuns = [...palavras(p.item.titulo)].filter((w) => chaves.has(w)).length;
-      // Afinidade: assunto pesa mais que origem, e capa desempata — quem
-      // explora quer VER o assunto, não só ler mais títulos.
+      const texto = `${p.item.titulo} ${(p.item.resumo ?? "").slice(0, 240)}`;
+      const doCandidato = palavras(texto);
+      const comuns = [...doCandidato].filter((w) => chaves.has(w)).length;
+      // Palavra em comum é obrigatória: eixo e conta são desempate, nunca
+      // porta de entrada — foi assim que "saúde mental na Maré" trouxe
+      // congelamento de leite materno para o painel.
       const afinidade =
-        Math.min(4, comuns) * 2 +
-        (eixo && eixo === eixoAlvo ? 2 : 0) +
+        Math.min(4, comuns) * 3 +
+        (eixo && eixo === eixoAlvo ? 1 : 0) +
         (conta && conta === contaAlvo ? 1 : 0) +
         (p.item.midia ? 1 : 0);
-      return { p, afinidade };
+      return { p, comuns, afinidade };
     })
-    .filter((c) => c.afinidade >= 2)
+    // Com muitas chaves, uma palavra solta em comum é coincidência, não
+    // assunto: o piso sobe junto com o vocabulário disponível.
+    .filter((c) => c.comuns >= (chaves.size >= 8 ? 2 : 1))
     .sort(
       (a, b) =>
         b.afinidade - a.afinidade ||
         (Date.parse(b.p.item.quando) || 0) - (Date.parse(a.p.item.quando) || 0),
-    )
+    );
+
+  // A mesma matéria chega por mais de um feed com ids diferentes; título
+  // repetido no painel é eco, não contexto.
+  const vistos = new Set<string>();
+  const unicos = candidatos
+    .filter(({ p }) => {
+      const chave = normalizar(p.item.titulo).slice(0, 70);
+      if (vistos.has(chave)) return false;
+      vistos.add(chave);
+      return true;
+    })
     .slice(0, limite);
 
   return NextResponse.json(
     {
       alvo: { id: alvo.item.id, titulo: alvo.item.titulo },
-      relacionados: candidatos.map(({ p }) => {
+      palavras: [...chaves],
+      relacionados: unicos.map(({ p }) => {
         const conta = resolverConta(p.item);
         return {
           id: p.item.id,
@@ -100,12 +125,31 @@ export async function GET(req: Request) {
   );
 }
 
-/** Palavras com conteúdo do título, para medir assunto em comum. */
-function palavras(titulo: string): Set<string> {
+/**
+ * Palavras vazias do português: sobreviver ao filtro de tamanho não faz de
+ * "quando", "porque" e "também" assunto — foi por elas que o painel de
+ * relacionados juntava posts que não dividiam nada além de gramática.
+ */
+const VAZIAS = new Set([
+  "sobre", "quando", "porque", "ainda", "também", "tambem", "muito", "muita", "todos", "todas",
+  "outro", "outra", "outros", "outras", "entre", "desde", "depois", "antes", "durante", "contra",
+  "aquele", "aquela", "aqueles", "aquelas", "estas", "estes", "dessa", "desse", "nessa", "nesse",
+  "desta", "deste", "nesta", "neste", "pelas", "pelos", "umas", "seus", "suas", "vocês", "voces",
+  "gente", "coisa", "coisas", "fazer", "feito", "feita", "tenha", "temos", "estão", "estao",
+  "sendo", "foram", "seria", "serão", "serao", "vamos", "poder", "podem", "confira", "saiba",
+  "veja", "acesse", "clique", "hoje", "amanhã", "amanha", "semana", "sexta", "sábado", "sabado",
+  "domingo", "segunda", "terça", "terca", "quarta", "quinta", "feira", "nesta", "neste", "junto",
+  "agora", "nosso", "nossa", "nossos", "nossas", "baixe", "baixar", "publica", "publico",
+  "publicas", "publicos", "completa", "completo", "ultima", "ultimo", "proxima", "proximo",
+  "realizamos", "realizou", "realiza", "atraves", "partir", "conheca", "confere", "corre",
+]);
+
+/** Palavras com conteúdo do texto, para medir assunto em comum. */
+function palavras(texto: string): Set<string> {
   return new Set(
-    normalizar(titulo)
+    normalizar(texto)
       .replace(/[^a-z0-9 ]/g, " ")
       .split(/\s+/)
-      .filter((w) => w.length > 4),
+      .filter((w) => w.length > 4 && !VAZIAS.has(w)),
   );
 }
