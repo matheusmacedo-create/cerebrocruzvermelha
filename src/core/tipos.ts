@@ -33,6 +33,7 @@ export type Vinculo =
 /** Direito sobre a mídia do sinal. Só `autorizado` pode entrar numa peça da filial. */
 export type Direito =
   | "autorizado" // material da Casa com autorização de imagem
+  | "casa" // material da própria filial, ainda sem termo de imagem confirmado
   | "movimento" // material do movimento; conferir data antes
   | "oficial" // material de órgão público; crédito obrigatório, nunca reassinado
   | "terceiro" // material de terceiro; só contexto de triagem
@@ -175,7 +176,7 @@ export interface SaudeFonte {
   url: string;
 }
 
-/** As sete perguntas da Mente, com nota de 0 a 100. */
+/** As seis perguntas da Mente, com nota de 0 a 100. */
 export interface Score {
   localidade: number;
   urgencia: number;
@@ -188,6 +189,8 @@ export interface Score {
   veredito: Veredito;
   /** Frases curtas que explicam a nota. A decisão precisa ser auditável. */
   porque: string[];
+  /** O eixo da filial em que o sinal encosta, quando encosta em algum. */
+  eixo?: Eixo;
 }
 
 /** Por que uma sugestão foi recusada. O motivo é o que ensina o Cérebro. */
@@ -222,6 +225,29 @@ export interface Recusa {
   contaId?: string;
   fonte: string;
   quando: string;
+}
+
+/**
+ * Um "sim" da Redação — o outro lado do laço.
+ *
+ * `pautado` é o sinal que virou pacote; `publicado` é o que foi ao ar. Sem
+ * eles o Cérebro só ouvia "não": seguia sugerindo o que a Casa já tinha
+ * publicado, e não sabia que um assunto já estava em produção.
+ */
+export type EventoDaRedacao = "pautado" | "publicado";
+
+export interface Aceite {
+  id: string;
+  evento: EventoDaRedacao;
+  titulo: string;
+  contaId?: string;
+  fonte: string;
+  quando: string;
+  /** O pacote da Redação, para quem quiser abrir de lá. */
+  pacoteId?: string;
+  /** Só em `publicado`: onde saiu. */
+  url?: string;
+  canais?: string[];
 }
 
 /** Uma coleta e quantos perfis o Instagram deixou passar. */

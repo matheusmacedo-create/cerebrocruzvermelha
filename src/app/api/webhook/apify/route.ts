@@ -28,19 +28,33 @@ interface CorpoWebhook {
  */
 export async function POST(req: Request) {
   const url = new URL(req.url);
-  const segredo = process.env.APIFY_WEBHOOK_SECRET;
+  const segredo = process.env.APIFY_WEBHOOK_SECRET?.trim();
+  // Sem segredo, em produção, a rota fecha: ela grava o acervo inteiro e
+  // dispara runs pagas de retentativa — não pode depender de ninguém lembrar
+  // de configurar a variável.
+  if (!segredo && process.env.NODE_ENV === "production") {
+    return NextResponse.json({ erro: "APIFY_WEBHOOK_SECRET não configurado" }, { status: 503 });
+  }
   if (segredo && url.searchParams.get("segredo") !== segredo) {
     return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
   }
-  if (!temToken() || !KV_STORE) {
-    return NextResponse.json({ erro: "Apify não configurada" }, { status: 503 });
-  }
-
+  // Só o fim de uma run bem-sucedida interessa; qualquer outro evento
+  // apontado para cá por engano é ignorado sem tocar no acervo.
+  const corpoCru = await req.text();
   let corpo: CorpoWebhook;
   try {
-    corpo = (await req.json()) as CorpoWebhook;
+    corpo = JSON.parse(corpoCru) as CorpoWebhook;
   } catch {
     return NextResponse.json({ erro: "corpo inválido" }, { status: 400 });
+  }
+  if (corpo.eventType && corpo.eventType !== "ACTOR.RUN.SUCCEEDED") {
+    return NextResponse.json({ ok: true, ignorado: corpo.eventType });
+  }
+  if (corpo.resource?.status && corpo.resource.status !== "SUCCEEDED") {
+    return NextResponse.json({ ok: true, ignorado: corpo.resource.status });
+  }
+  if (!temToken() || !KV_STORE) {
+    return NextResponse.json({ erro: "Apify não configurada" }, { status: 503 });
   }
 
   const datasetId = corpo.resource?.defaultDatasetId;

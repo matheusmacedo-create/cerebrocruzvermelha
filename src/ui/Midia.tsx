@@ -77,6 +77,6 @@ export function Midia({
 
 function classeDireito(d: Direito): string {
   if (d === "autorizado") return "pode";
-  if (d === "oficial" || d === "movimento") return "credito";
+  if (d === "casa" || d === "oficial" || d === "movimento") return "credito";
   return "nao";
 }

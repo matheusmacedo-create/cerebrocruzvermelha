@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { resolverConta } from "@/core/contas";
 import { planoDeCanais, proibicoes } from "@/core/canais";
-import { direitoDe, podePublicar } from "@/core/direito";
+import { daCasa, direitoDe, podePublicar } from "@/core/direito";
 import { MODO_ROTULO } from "@/core/mente";
 import { VERSAO_CONTRATO } from "@/core/contrato";
+import { EIXOS, type Aceite, type Modo } from "@/core/tipos";
 import { agrupar, diversificar } from "@/core/agrupar";
-import { lerRecusas } from "@/dados/feedback";
+import { lerAceites, lerRecusas } from "@/dados/feedback";
 import { lerContextoDaRedacao } from "@/dados/redacao";
+import { autorizadoNoContrato } from "../_lib/autorizacao";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +20,15 @@ export const dynamic = "force-dynamic";
  * feito — fato, fonte, nota, plano por canal e as proibições — e para aqui.
  * Quem produz, aprova e publica é a Redação, com decisão humana.
  *
- *   GET /api/pauta            → as pautas que passaram do corte
- *   GET /api/pauta?id=<id>    → uma pauta específica
- *   GET /api/pauta?modo=produzir&limite=10
+ *   GET /api/pauta                          → as pautas que passaram do corte
+ *   GET /api/pauta?id=<id>                  → uma pauta específica (o chefe da família, se o id for de um recolhido)
+ *   GET /api/pauta?modo=produzir&limite=10  → por modo; `modo=agir_agora,avaliar` aceita lista; `modo=todos` traz tudo
  *
  * O formato é estável: mudanças aqui quebram a Redação, então versionamos
  * em src/core/contrato.ts.
  */
+
+const MODOS_DO_CORTE: Modo[] = ["agir_agora", "produzir", "agendar"];
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -35,39 +39,58 @@ export async function GET(req: Request) {
 
   // Quando há segredo configurado, o contrato deixa de ser público: o
   // raciocínio editorial da filial não precisa ficar aberto na internet.
-  const segredo = process.env.PAUTA_TOKEN;
-  if (segredo) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${segredo}`) {
-      return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
-    }
+  if (!autorizadoNoContrato(req)) {
+    return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
   }
   const id = url.searchParams.get("id");
   const modo = url.searchParams.get("modo");
-  const limite = Math.min(Number(url.searchParams.get("limite") ?? 20) || 20, 100);
+  const limite = Math.min(Math.max(1, Number(url.searchParams.get("limite") ?? 20) || 20), 100);
 
   // A Redação nunca deve receber pauta que a equipe já recusou aqui — e o
   // que ela publicou ou registrou volta como contexto (fase 2 do contrato).
-  const [acervo, recusados, daRedacao] = await Promise.all([
+  const [acervo, recusados, aceites, daRedacao] = await Promise.all([
     carregarAcervo(),
     lerRecusas(),
+    lerAceites(),
     lerContextoDaRedacao(),
   ]);
   let pontuados = diversificar(
-    agrupar(pontuar(acervo.itens, { hoje: acervo.hoje, recusados, ...daRedacao })),
+    agrupar(pontuar(acervo.itens, { hoje: acervo.hoje, recusados, aceites, ...daRedacao })),
   );
 
-  if (id) pontuados = pontuados.filter((p) => p.item.id === id);
-  else if (modo) pontuados = pontuados.filter((p) => p.score.modo === modo);
-  else pontuados = pontuados.filter((p) => ["agir_agora", "produzir", "agendar"].includes(p.score.modo));
+  if (id) {
+    // O agrupamento recolhe boletins num chefe de família, e a Redação pode
+    // ter guardado o id de qualquer membro: pedir um recolhido devolve o
+    // chefe que o representa hoje — era o 404 por trás de "não foi possível
+    // ler esta pauta".
+    pontuados = pontuados.filter((p) => p.item.id === id || p.recolhidos.some((r) => r.id === id));
+  } else if (modo && modo !== "todos") {
+    const modos = new Set(modo.split(",").map((m) => m.trim()).filter(Boolean));
+    pontuados = pontuados.filter((p) => modos.has(p.score.modo));
+  } else if (!modo) {
+    pontuados = pontuados.filter((p) => MODOS_DO_CORTE.includes(p.score.modo));
+  }
 
   if (id && pontuados.length === 0) {
     return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
   }
 
+  const aceitePorSinal = new Map<string, { pautado?: Aceite; publicado?: Aceite }>();
+  for (const a of aceites) {
+    const atual = aceitePorSinal.get(a.id) ?? {};
+    atual[a.evento] = a;
+    aceitePorSinal.set(a.id, atual);
+  }
+
   const pautas = pontuados.slice(0, limite).map(({ item, score, semelhantes, recolhidos }) => {
     const conta = resolverConta(item);
     const d = direitoDe(item);
+    // O aceite pode ter sido gravado com o id de qualquer membro da família:
+    // o chefe muda entre coletas, o que a Redação fez com o sinal não.
+    const membros = [item, ...recolhidos];
+    const pautado = membros.map((i) => aceitePorSinal.get(i.id)?.pautado).find(Boolean);
+    const publicado = membros.map((i) => aceitePorSinal.get(i.id)?.publicado).find(Boolean);
+    const naRedacao = pautado || publicado ? { pautado, publicado } : undefined;
     return {
       id: item.id,
       titulo: item.titulo,
@@ -95,6 +118,9 @@ export async function GET(req: Request) {
         },
         // A Redação recebe o raciocínio, não só a conclusão.
         porque: score.porque,
+        // A editoria: em que eixo da filial o sinal encosta.
+        eixo: score.eixo ?? null,
+        eixoRotulo: score.eixo ? EIXOS[score.eixo] : null,
       },
       midia: item.midia
         ? {
@@ -114,7 +140,7 @@ export async function GET(req: Request) {
              * o Cérebro sustenta. Continua exigindo autorização humana antes
              * de publicar, mas por um motivo diferente: quem aparece na foto.
              */
-            daCasa: conta?.vinculo === "casa",
+            daCasa: daCasa(d) || conta?.vinculo === "casa",
             credito: item.midia.credito,
           }
         : null,
@@ -125,6 +151,15 @@ export async function GET(req: Request) {
       },
       canais: planoDeCanais(item, score),
       proibido: proibicoes(item),
+      // O que a Redação já fez com este sinal — o laço fechado, de volta a ela.
+      naRedacao: naRedacao
+        ? {
+            pautadoEm: naRedacao.pautado?.quando ?? null,
+            publicadoEm: naRedacao.publicado?.quando ?? null,
+            pacoteId: naRedacao.publicado?.pacoteId ?? naRedacao.pautado?.pacoteId ?? null,
+            url: naRedacao.publicado?.url ?? null,
+          }
+        : null,
       // Link de volta para a triagem, para quem quiser ver o raciocínio inteiro.
       urlNoCerebro: `${origem}/jornal#${item.id}`,
     };
