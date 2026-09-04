@@ -117,3 +117,41 @@ todas as telas e do próprio `/api/pauta`, com cache de 5 minutos. Configuraçã
 `REDACAO_CONTEXTO_TOKEN`, o mesmo segredo do `CEREBRO_CONTEXTO_TOKEN` de lá,
 necessário só se a Redação fechar a rota. Falha de rede, rota ausente ou
 resposta estranha degradam para o comportamento antigo, nunca para erro.
+
+## O "sim" também volta — fase 3 (contrato 1.3)
+
+Um Cérebro que só ouve "não" aprende a calar. A Redação agora devolve também
+o que fez com cada sinal, no mesmo `POST /api/feedback`:
+
+```jsonc
+{ "id": "64f3a318…", "evento": "pautado", "pacoteId": "…" }
+{ "id": "64f3a318…", "evento": "publicado", "pacoteId": "…", "url": "https://…", "canais": ["site_web", "instagram"] }
+```
+
+- **`pautado`** — a Redação abriu um pacote a partir do sinal. O motor anota
+  no `porque` ("Já está em pauta na Redação") e o contrato devolve isso em
+  `naRedacao`, para nenhuma tela sugerir de novo o que já está em produção.
+- **`publicado`** — a peça foi ao ar. O sinal sai da atenção (nota ≤ 25) e a
+  **família** dele — o mesmo gabarito de boletim, a mesma notícia por outro
+  caminho — perde ineditismo por sete dias.
+
+A memória fica no KV, em `aceites`, ao lado das recusas. E as recusas
+mudaram de natureza: "repetitivo"/"já falamos" agora valem para a **família**
+do boletim (não para a conta inteira), esfriam com meia-vida de três semanas e
+nunca alcançam um sinal com urgência alta — três cliques num "TEMPO AGORA" não
+apagam mais um Estágio 5.
+
+O que mais mudou na 1.3, tudo aditivo: `decisao.eixo`/`decisao.eixoRotulo`
+(a editoria), `midia.direito` pode vir `"casa"` (foto da própria filial, ainda
+sem termo de imagem — entra como pendente, nunca como de terceiro), `?id=`
+aceita o id de um boletim recolhido e devolve o chefe da família, e `?modo=`
+aceita lista (`agir_agora,avaliar`) e `todos`.
+
+## A porta
+
+Com `PAUTA_TOKEN` configurado, **todas** as rotas do contrato — `/api/pauta`,
+`/api/feedback`, `/api/grafo`, `/api/relacionados` — exigem
+`Authorization: Bearer <PAUTA_TOKEN>`. A Redação manda o `CEREBRO_TOKEN` dela;
+os dois têm de ser o mesmo valor. Sem o token o contrato fica aberto, e
+`/api/saude` avisa em `avisos` — a memória editorial da filial não deveria
+ficar escrevível por qualquer pessoa na internet.

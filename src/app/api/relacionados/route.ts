@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import type { Eixo, Score } from "@/core/tipos";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { resolverConta } from "@/core/contas";
 import { ehSinal, MODO_ROTULO } from "@/core/mente";
 import { normalizar } from "@/core/lexico";
-import { lerRecusas } from "@/dados/feedback";
+import { lerAceites, lerRecusas } from "@/dados/feedback";
 import { lerContextoDaRedacao } from "@/dados/redacao";
+import { autorizadoNoContrato } from "../_lib/autorizacao";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const origem = `${url.protocol}//${url.host}`;
 
-  const segredo = process.env.PAUTA_TOKEN;
-  if (segredo && req.headers.get("authorization") !== `Bearer ${segredo}`) {
+  if (!autorizadoNoContrato(req)) {
     return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
   }
 
@@ -40,21 +39,22 @@ export async function GET(req: Request) {
   // metades do painel contam a mesma história.
   const q = url.searchParams.get("q")?.trim() || null;
 
-  const [acervo, recusados, daRedacao] = await Promise.all([
+  const [acervo, recusados, aceites, daRedacao] = await Promise.all([
     carregarAcervo(),
     lerRecusas(),
+    lerAceites(),
     lerContextoDaRedacao(),
   ]);
 
   const pontuados = pontuar(
     acervo.itens.filter((i) => ehSinal(i)),
-    { hoje: acervo.hoje, recusados, ...daRedacao },
+    { hoje: acervo.hoje, recusados, aceites, ...daRedacao },
   );
   const alvo = pontuados.find((p) => p.item.id === id);
   if (!alvo) return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
 
   const contaAlvo = resolverConta(alvo.item)?.id;
-  const eixoAlvo = (alvo.score as Score & { eixo?: Eixo }).eixo;
+  const eixoAlvo = alvo.score.eixo;
   // As chaves saem dos termos da Redação quando vierem; senão, do título e
   // do começo do resumo do próprio sinal.
   const chaves = q
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     .filter((p) => p.item.id !== id)
     .map((p) => {
       const conta = resolverConta(p.item)?.id;
-      const eixo = (p.score as Score & { eixo?: Eixo }).eixo;
+      const eixo = p.score.eixo;
       const texto = `${p.item.titulo} ${(p.item.resumo ?? "").slice(0, 240)}`;
       const doCandidato = palavras(texto);
       const comuns = [...doCandidato].filter((w) => chaves.has(w)).length;
