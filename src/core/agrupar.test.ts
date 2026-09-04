@@ -57,7 +57,7 @@ test("diversificar só rebaixa o que está abaixo da nota mínima", () => {
     { item: item("e", "Feira de artesanato", "sedec-rj", "Defesa Civil do Estado (RJ)"), score: score(30) },
   ]);
   const ordem = diversificar(lista).map((a) => a.item.id);
-  // A terceira notícia boa da Defesa Civil (63) fica antes do item de 32;
-  // a de 30 é a que cede a vaga.
-  assert.deepEqual(ordem, ["a", "b", "c", "d", "e"]);
+  // A cota de cada fonte primeiro (a, b e a Maré), depois a terceira notícia
+  // boa da Defesa Civil (63) — antes do item de 30, que é o que cede a vaga.
+  assert.deepEqual(ordem, ["a", "b", "d", "c", "e"]);
 });

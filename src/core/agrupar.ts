@@ -175,25 +175,24 @@ export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
  * invisíveis. Quem abre precisa ver a variedade do dia, não o ranking de
  * quem postou mais.
  *
- * Só o que está abaixo de `minimoNota` cede a vaga: uma terceira notícia
- * boa da mesma conta continua no lugar que a nota lhe dá — rebaixá-la para
- * depois de itens de 32 era esconder pauta, não dar variedade.
+ * Três camadas: a cota de cada fonte primeiro (a variedade do dia), depois o
+ * que passou da cota mas ainda está acima de `minimoNota` (a terceira notícia
+ * boa da mesma conta — rebaixá-la para depois de itens de 32 era esconder
+ * pauta), e só então o resto. Se houver poucas fontes, a tela não fica vazia.
  */
 export function diversificar(lista: Agrupado[], porFonte = 2, minimoNota = 55): Agrupado[] {
   const contagem = new Map<string, number>();
   const escolhidos: Agrupado[] = [];
+  const excedentesBons: Agrupado[] = [];
   const sobra: Agrupado[] = [];
 
   for (const a of lista) {
     const chave = resolverConta(a.item)?.id ?? a.item.fonte;
     const n = contagem.get(chave) ?? 0;
-    if (n < porFonte || a.score.total >= minimoNota) {
-      contagem.set(chave, n + 1);
-      escolhidos.push(a);
-    } else {
-      sobra.push(a);
-    }
+    contagem.set(chave, n + 1);
+    if (n < porFonte) escolhidos.push(a);
+    else if (a.score.total >= minimoNota) excedentesBons.push(a);
+    else sobra.push(a);
   }
-  // A sobra volta no fim: se houver poucas fontes no dia, a tela não fica vazia.
-  return [...escolhidos, ...sobra];
+  return [...escolhidos, ...excedentesBons, ...sobra];
 }

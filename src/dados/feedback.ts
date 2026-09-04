@@ -73,13 +73,19 @@ export async function lerAceites(): Promise<Aceite[]> {
 
 /**
  * Registra um "sim". O mesmo sinal pode ser pautado e depois publicado — são
- * dois eventos; repetir o mesmo evento do mesmo sinal só atualiza a data.
+ * dois eventos. Repetir o mesmo evento do mesmo sinal atualiza url, canais e
+ * pacote, mas guarda a PRIMEIRA data: a Redação reenvia "publicado" a cada
+ * recontagem de status, e é a data original que mede "há quantos dias a Casa
+ * publicou".
  */
 export async function registrarAceite(novo: Aceite): Promise<Aceite[]> {
   if (!temToken() || !KV_STORE) throw new Error("Apify não configurada");
   const atuais = await lerAceites();
-  const semDuplicata = atuais.filter((a) => !(a.id === novo.id && a.evento === novo.evento));
-  const lista = [novo, ...semDuplicata].slice(0, TETO_ACEITES);
+  const anterior = atuais.find((a) => a.id === novo.id && a.evento === novo.evento);
+  const registro =
+    anterior && Date.parse(anterior.quando) < Date.parse(novo.quando) ? { ...novo, quando: anterior.quando } : novo;
+  const semDuplicata = atuais.filter((a) => a !== anterior);
+  const lista = [registro, ...semDuplicata].slice(0, TETO_ACEITES);
   await gravarKV(KV_STORE, CHAVE_ACEITES, lista);
   return lista;
 }

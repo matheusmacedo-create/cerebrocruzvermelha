@@ -35,27 +35,36 @@ export async function POST(req: Request) {
   }
 
   const { id, motivo, evento } = corpo;
-  if (!id) return NextResponse.json({ erro: "faltou o id do sinal" }, { status: 400 });
+  if (!id || typeof id !== "string") return NextResponse.json({ erro: "faltou o id do sinal" }, { status: 400 });
 
   const acervo = await carregarAcervo();
   const item = acervo.itens.find((i) => i.id === id);
-  if (!item) return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
 
   if (evento) {
     if (!EVENTOS.has(evento as EventoDaRedacao)) {
       return NextResponse.json({ erro: "evento inválido", aceitos: [...EVENTOS] }, { status: 400 });
     }
+    // "Publicado" chega dias depois de "pautado", e o sinal pode já ter saído
+    // da janela do acervo. O aceite anterior do mesmo id guarda título e fonte
+    // — e é a prova de que o id passou pela porta quando ainda estava aqui.
+    const base = item ?? (await lerAceites()).find((a) => a.id === id);
+    if (!base) return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
     const aceite: Aceite = {
-      id: item.id,
+      id,
       evento: evento as EventoDaRedacao,
-      titulo: item.titulo,
-      contaId: item.contaId,
-      fonte: item.fonte,
+      titulo: base.titulo,
+      contaId: base.contaId,
+      fonte: base.fonte,
       quando: new Date().toISOString(),
       ...(typeof corpo.pacoteId === "string" && corpo.pacoteId ? { pacoteId: corpo.pacoteId.slice(0, 80) } : {}),
       ...(typeof corpo.url === "string" && /^https?:\/\//.test(corpo.url) ? { url: corpo.url.slice(0, 500) } : {}),
       ...(Array.isArray(corpo.canais)
-        ? { canais: corpo.canais.filter((c): c is string => typeof c === "string").slice(0, 12) }
+        ? {
+            canais: corpo.canais
+              .filter((c): c is string => typeof c === "string" && c.length > 0)
+              .slice(0, 12)
+              .map((c) => c.slice(0, 40)),
+          }
         : {}),
     };
     try {
@@ -67,6 +76,8 @@ export async function POST(req: Request) {
     }
   }
 
+  // Recusa é sobre o que está na tela: exige o item no acervo.
+  if (!item) return NextResponse.json({ erro: `sinal ${id} não encontrado` }, { status: 404 });
   if (!motivo || !(motivo in MOTIVOS)) {
     return NextResponse.json(
       { erro: "motivo inválido", aceitos: Object.keys(MOTIVOS) },

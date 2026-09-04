@@ -85,7 +85,12 @@ export async function GET(req: Request) {
   const pautas = pontuados.slice(0, limite).map(({ item, score, semelhantes, recolhidos }) => {
     const conta = resolverConta(item);
     const d = direitoDe(item);
-    const naRedacao = aceitePorSinal.get(item.id);
+    // O aceite pode ter sido gravado com o id de qualquer membro da família:
+    // o chefe muda entre coletas, o que a Redação fez com o sinal não.
+    const membros = [item, ...recolhidos];
+    const pautado = membros.map((i) => aceitePorSinal.get(i.id)?.pautado).find(Boolean);
+    const publicado = membros.map((i) => aceitePorSinal.get(i.id)?.publicado).find(Boolean);
+    const naRedacao = pautado || publicado ? { pautado, publicado } : undefined;
     return {
       id: item.id,
       titulo: item.titulo,

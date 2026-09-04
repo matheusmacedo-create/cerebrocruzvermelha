@@ -32,13 +32,25 @@ export const RJ: Termo[] = [
  * AGORA" é a abertura do boletim mais rotineiro da cidade — com eles, todo
  * boletim de previsão virava urgência. "Estágio" só conta do 3 para cima.
  */
+/*
+ * Radicais com derivação longa entram como regex: a cauda de flexões só cobre
+ * o plural e o particípio, e "soterramento", "interditada", "epidemiológico"
+ * e "resgatam" ficariam de fora. "Socorro" não pode achar "primeiros
+ * socorros" — é o curso mais comum da filial, não uma emergência.
+ */
+const SOTERR = /\bsoterr\p{L}{0,7}\b/u;
+const INTERDI = /\binterdi\p{L}{0,5}\b/u;
+const EPIDEMI = /\bepidemi\p{L}{0,8}\b/u;
+const RESGAT = /\bresgat\p{L}{0,5}\b/u;
+const SOCORRO = /(?<!primeiros[\s-])\bsocorros?\b/u;
+
 export const URGENTE: Termo[] = [
   "emergência", "calamidade", "evacuação", "sirene", "desabamento", "deslizamento", "enchente",
   "alagamento", "transbordamento", "inundação", /estagio ?[345]\b/, /estagio de (alerta|crise)/,
   "alerta vermelho", "alerta máximo", "alerta laranja", "grande perigo", "perigo",
-  "vítimas", "ferid", "óbito", "mort", "desaparecid", "soterrad", "ilhad", "resgat", "socorro",
-  "surto", "epidemia", "crítico", "estoque crítico", "urgente", "imediato", "temporal", "vendaval",
-  "granizo", "ressaca", "interdi", "desabrigad", "desalojad", "risco de morte",
+  "vítima", "ferid", "óbito", "mort", "desaparecid", SOTERR, "ilhad", RESGAT, SOCORRO,
+  "surto", EPIDEMI, "crítico", "estoque crítico", "urgente", "imediato", "temporal", "vendaval",
+  "granizo", "ressaca", INTERDI, "desabrigad", "desalojad", "risco de morte",
 ];
 
 /**
@@ -47,21 +59,21 @@ export const URGENTE: Termo[] = [
  * AGORA" — e não se agrupa com ele.
  */
 export const GRAVE: Termo[] = [
-  "ferid", "óbito", "mort", "soterrad", "desaparecid", "ilhad", "desabamento",
+  "vítima", "ferid", "óbito", "mort", SOTERR, "desaparecid", "ilhad", "desabamento",
   "desabrigad", "desalojad", /estagio ?[45]\b/, "calamidade", "evacuação",
 ];
 
 export const EIXO_TERMOS: Record<string, Termo[]> = {
   grd: [
-    "chuva", "desastre", "defesa civil", "risco", "enchente", "deslizamento", "desabamento", "soterr",
-    "resgat", "bombeiro", "socorro", "alerta", "clima",
+    "chuva", "desastre", "defesa civil", "risco", "enchente", "deslizamento", "desabamento", SOTERR,
+    RESGAT, "bombeiro", SOCORRO, "alerta", "clima",
     "temporal", "resiliência", "abrigo", "desabrigad", "evacuação", "inundação", "seca", "estiagem",
     "incêndio", "queimada", "vendaval", "granizo", "sirene", "simulado", "contingência", "ciclone",
     "tempestade", "ressaca", "onda de calor", "frio intenso", "baixa umidade", "ponto de apoio",
     "kit humanitário", "kit de higiene", "cesta básica", "barragem", "leptospirose",
   ],
   saude: [
-    "saúde", "vacina", "epidemi", "surto", "dengue", "chikungunya", "zika", "arbovirose", "mpox", "sarampo",
+    "saúde", "vacina", EPIDEMI, "surto", "dengue", "chikungunya", "zika", "arbovirose", "mpox", "sarampo",
     "hospital", "posto", "boletim", "vigilância", "sangue", "doação de sangue", "hemocentro", "estoque",
     "influenza", "gripe", "covid", "tuberculose", "saúde mental", "hanseníase", "hiv", "aids", "sífilis",
     "testagem", "febre amarela", "leptospirose", "hepatite", "aleitamento", "caps", "suicídio",
@@ -166,7 +178,9 @@ export function aberturaDeBoletim(titulo: string): string | null {
 export function gabaritoOperacional(titulo: string): "tempo" | "transito" | null {
   const abertura = aberturaDeBoletim(titulo);
   if (!abertura) return null;
-  if (bate(abertura, GRAVE)) return null;
+  // Sobre o título inteiro, não sobre a abertura: ela perde os dígitos, e
+  // "ESTÁGIO 5" é grave justamente pelo número.
+  if (bate(titulo, GRAVE)) return null;
   if (GABARITO_TEMPO.some((t) => abertura.includes(t))) return "tempo";
   if (GABARITO_TRANSITO.some((t) => abertura.includes(t))) return "transito";
   return null;
@@ -174,18 +188,27 @@ export function gabaritoOperacional(titulo: string): "tempo" | "transito" | null
 
 /**
  * O que anula um termo de urgência quando vem logo antes dele: "não há
- * previsão de temporal", "sem registro de alagamento". A janela é curta e
- * não atravessa ponto final — negação de uma frase não alcança a seguinte.
+ * previsão de temporal", "sem registro de alagamento". A janela é curta, não
+ * atravessa ponto final nem dois-pontos, e uma adversativa ("não há temporal,
+ * MAS há risco de alagamento") encerra a negação — a vírgula sozinha não, porque
+ * a lista negada é a forma mais comum do boletim ("sem registro de
+ * alagamentos, deslizamentos ou quedas de árvore").
  */
 const NEGACAO = new RegExp(
   [
     // "não há previsão de temporal", "nenhum registro de alagamento"
-    String.raw`(?:\bnao (?:ha|havera|tem|houve|registra|preve)\b|\bnenhum[a]?\b|\bbaixa probabilidade de\b)[^.!?;\n]{0,40}$`,
+    String.raw`(?:\bnao (?:ha|havera|tem|houve|registra|preve)\b|\bnenhum[a]?\b|\bbaixa probabilidade de\b)(?:(?!\b(?:mas|porem|contudo|entretanto|todavia|no entanto)\b)[^.!?;:\n]){0,40}$`,
     // "sem previsão de chuva forte", "sem registro de feridos" — e "sem feridos"
     String.raw`\bsem (?:(?:previsao|registro|registros|risco|ocorrencia|ocorrencias|casos|indicio|indicios|sinal|sinais)(?: de)? *)?$`,
   ].join("|"),
   "u",
 );
+
+/**
+ * Só a linguagem de emergência é negável: "não há feridos em Petrópolis" nega
+ * os feridos, não Petrópolis. Lugar, eixo e ação da filial contam sempre.
+ */
+const NEGAVEIS = new WeakSet<Termo[]>([URGENTE, GRAVE]);
 
 /**
  * Cada lista é compilada uma vez: termos normalizados, sem duplicata
@@ -226,12 +249,17 @@ function compilar(termos: Termo[]): RegExp[] {
 /** Quantos termos distintos da lista aparecem no texto, sem contar os negados. */
 export function conta(texto: string, termos: Termo[]): number {
   const t = normalizar(texto);
+  const negavel = NEGAVEIS.has(termos);
   let n = 0;
   for (const re of compilar(termos)) {
-    const m = re.exec(t);
-    if (!m) continue;
-    if (NEGACAO.test(t.slice(Math.max(0, m.index - 48), m.index))) continue;
-    n++;
+    // Basta uma ocorrência não negada: "não há feridos em A. Feridos em B."
+    // conta — a segunda frase afirma.
+    const global = new RegExp(re.source, `${re.flags}g`);
+    for (let m = global.exec(t); m; m = global.exec(t)) {
+      if (negavel && NEGACAO.test(t.slice(Math.max(0, m.index - 48), m.index))) continue;
+      n++;
+      break;
+    }
   }
   return n;
 }

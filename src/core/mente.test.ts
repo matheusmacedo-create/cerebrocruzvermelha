@@ -119,6 +119,26 @@ test("sinal publicado pela Casa sai da atenção", () => {
   assert.ok(s.porque.some((p) => p.includes("já publicou")));
 });
 
+test("a mesma notícia publicada por outro caminho também sai da atenção", () => {
+  const aceites: Aceite[] = [{
+    id: "insta1", evento: "publicado", titulo: "Defesa Civil RJ realiza simulado de evacuação em Petrópolis",
+    contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)", quando: diasAtras(1),
+  }];
+  const gemeo = decidir(
+    item({ id: "rss1", contaId: undefined, fonte: "Defesa Civil do Estado (RJ)", plataforma: "rss", titulo: "Defesa Civil RJ realiza simulado de evacuação em Petrópolis" }),
+    ctx({ aceites }),
+  );
+  assert.ok(gemeo.total <= 25, `total ${gemeo.total}: ${gemeo.porque.join(" | ")}`);
+});
+
+test("ação da Casa ignora palavras sem conteúdo", () => {
+  const s = decidir(
+    item({ contaId: "sedec-rj", fonte: "Defesa Civil do Estado (RJ)", titulo: "Defesa Civil fala sobre prevenção na cidade" }),
+    ctx({ acoesDaCasa: ["Conversa sobre voluntariado na cidade"] }),
+  );
+  assert.ok(s.acaoReal < 60, `acaoReal ${s.acaoReal}`);
+});
+
 test("a Casa publicou um boletim desta família há poucos dias: ineditismo cai", () => {
   const aceites: Aceite[] = [{
     id: "pub1", evento: "publicado", titulo: "TEMPO AGORA | Chuva forte na Zona Oeste",
@@ -147,6 +167,12 @@ test("a própria filial publicando é ação real e encosta no eixo", () => {
   assert.equal(s.acaoReal, 100);
   assert.ok(s.relacao >= 85);
   assert.ok(s.eixo, "eixo definido");
+  const curso = decidir(
+    item({ contaId: "cvrj", fonte: "Cruz Vermelha RJ", titulo: "Cruz Vermelha RJ abre turma de primeiros socorros na Maré" }),
+    ctx(),
+  );
+  assert.equal(curso.eixo, "primeiros_socorros");
+  assert.ok(curso.urgencia < 40, `urgência ${curso.urgencia}`);
 });
 
 test("data no futuro não ganha bônus de frescor", () => {

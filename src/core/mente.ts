@@ -144,7 +144,7 @@ export function decidir(item: Item, ctx: ContextoDecisao): Score {
     return montar({ localidade, urgencia, relacao, acaoReal, ineditismo, confianca }, total, "monitorar", "nao", porque, eixo);
   }
   // O sinal que a Casa já publicou não disputa mais atenção: a peça saiu.
-  const publicado = aceiteDe(item, ctx, "publicado");
+  const publicado = aceiteDe(item, ctx, "publicado", agora);
   if (publicado) {
     porque.push(`A Casa já publicou este sinal${publicado.canais?.length ? ` (${publicado.canais.join(", ")})` : ""}. Saiu da atenção; fica como histórico.`);
     total = Math.min(total, 25);
@@ -173,7 +173,7 @@ export function decidir(item: Item, ctx: ContextoDecisao): Score {
     }
   }
 
-  const pautado = aceiteDe(item, ctx, "pautado");
+  const pautado = aceiteDe(item, ctx, "pautado", agora);
   if (pautado && !publicado) {
     porque.push("Já está em pauta na Redação: existe um pacote aberto para este sinal.");
   }
@@ -404,15 +404,31 @@ function cansacoDaFamilia(item: Item, ctx: ContextoDecisao, agora: number, conta
     if (r.contaId !== conta.id) continue;
     const dela = assinatura({ titulo: r.titulo, contaId: r.contaId, fonte: r.fonte });
     // Sem família reconhecível de nenhum dos lados, vale a conta inteira —
-    // é o comportamento antigo, restrito ao caso em que não há como fazer melhor.
-    if (minha && dela && minha !== dela) continue;
+    // é o comportamento antigo, restrito ao caso em que não há como fazer
+    // melhor. Família de um lado só é família diferente.
+    if (minha !== dela) continue;
     peso += Math.pow(0.5, diasDesde(r.quando, agora) / MEIA_VIDA_RECUSA_DIAS);
   }
   return peso;
 }
 
-function aceiteDe(item: Item, ctx: ContextoDecisao, evento: Aceite["evento"]): Aceite | undefined {
-  return (ctx.aceites ?? []).find((a) => a.id === item.id && a.evento === evento);
+/**
+ * O aceite que alcança este item: o dele mesmo ou, dentro da janela, o da
+ * mesma notícia chegada por outro caminho — publicada a nota do Instagram, o
+ * gêmeo do RSS não pode voltar à atenção como chefe da família.
+ */
+function aceiteDe(item: Item, ctx: ContextoDecisao, evento: Aceite["evento"], agora: number): Aceite | undefined {
+  const aceites = ctx.aceites ?? [];
+  const direto = aceites.find((a) => a.id === item.id && a.evento === evento);
+  if (direto) return direto;
+  const minha = assinatura(item);
+  if (!minha || !minha.startsWith("noticia::")) return undefined;
+  return aceites.find(
+    (a) =>
+      a.evento === evento &&
+      diasDesde(a.quando, agora) <= JANELA_PUBLICADO_DIAS &&
+      assinatura({ titulo: a.titulo, contaId: a.contaId, fonte: a.fonte }) === minha,
+  );
 }
 
 /** Dias desde que a Casa publicou um sinal da mesma família — ou null. */
@@ -430,8 +446,21 @@ function publicadoNaFamilia(item: Item, ctx: ContextoDecisao, agora: number): nu
   return menor === null ? null : Math.max(0, Math.round(menor));
 }
 
+/**
+ * Palavras que não dizem de que assunto se trata, mesmo compridas: duas
+ * delas em comum ("sobre" e "cidade") não fazem de um curso a ação da filial.
+ */
+const SEM_CONTEUDO = new Set([
+  "sobre", "ainda", "entre", "contra", "durante", "depois", "antes", "tambem", "quando", "quanto",
+  "porque", "todos", "todas", "outro", "outra", "outros", "outras", "muito", "muita", "muitos",
+  "muitas", "mesmo", "mesma", "neste", "nesta", "nesse", "nessa", "pelos", "pelas", "apenas",
+  "assim", "entao", "agora", "cidade", "pessoas", "estado", "governo", "atraves", "partir",
+]);
+
 function palavrasComConteudo(texto: string): string[] {
-  return normalizar(texto).split(/[^a-z0-9]+/).filter((w) => w.length > 4);
+  return normalizar(texto)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 4 && !SEM_CONTEUDO.has(w));
 }
 
 function instante(ctx: ContextoDecisao): number {
