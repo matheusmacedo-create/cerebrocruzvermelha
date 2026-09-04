@@ -52,7 +52,10 @@ const PALAVRAS_DE_CALENDARIO = new Set([
   "de", "da", "do", "das", "dos", "com", "e", "no", "na", "nos", "nas", "em",
 ]);
 
-export function familia(item: Item): string | null {
+/** O que basta para assinar: título e de onde veio. Recusas e aceites guardam só isso. */
+export type Assinavel = Pick<Item, "titulo" | "contaId" | "fonte">;
+
+export function familia(item: Assinavel): string | null {
   const conta = resolverConta(item);
   if (!conta) return null;
 
@@ -94,13 +97,24 @@ export function familia(item: Item): string | null {
  * tela mostra o mesmo fato duas vezes — parte do que faz o dia parecer
  * repetitivo mesmo quando não é.
  */
-export function mesmaNoticia(item: Item): string | null {
+export function mesmaNoticia(item: Assinavel): string | null {
+  // Os dígitos ficam: "Estágio 2" e "Estágio 3" são notícias diferentes, e
+  // "edição 130" não é "edição 131".
   const chave = normalizar(item.titulo)
-    .replace(/[^a-z ]/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 70);
   return chave.length >= 25 ? `noticia::${chave}` : null;
+}
+
+/**
+ * A assinatura que o motor usa para lembrar: família do boletim quando há,
+ * senão a notícia em si. É por ela que uma recusa em "TEMPO AGORA" alcança o
+ * "TEMPO AGORA" de amanhã e não alcança o Estágio 5.
+ */
+export function assinatura(item: Assinavel): string | null {
+  return familia(item) ?? mesmaNoticia(item);
 }
 
 /** Recolhe boletins repetidos, preservando a ordem por nota. */
@@ -125,9 +139,14 @@ export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
       agrupados.push({ ...membros[0], semelhantes: 0, recolhidos: [] });
       continue;
     }
-    // Maior nota representa; empate desempata pelo mais recente.
+    // Maior nota representa; empate desempata pelo mais recente e, por fim,
+    // pelo id — sem o último critério o chefe oscilava entre duas leituras e
+    // a Redação não reencontrava a pauta que acabara de abrir.
     const ordenados = [...membros].sort(
-      (a, b) => b.score.total - a.score.total || +new Date(b.item.quando) - +new Date(a.item.quando),
+      (a, b) =>
+        b.score.total - a.score.total ||
+        (Date.parse(b.item.quando) || 0) - (Date.parse(a.item.quando) || 0) ||
+        a.item.id.localeCompare(b.item.id),
     );
     const [chefe, ...resto] = ordenados;
     agrupados.push({
@@ -140,11 +159,11 @@ export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
         ],
       },
       semelhantes: resto.length,
-      recolhidos: resto.map((r) => r.item).sort((a, b) => +new Date(b.quando) - +new Date(a.quando)),
+      recolhidos: resto.map((r) => r.item).sort((a, b) => (Date.parse(b.quando) || 0) - (Date.parse(a.quando) || 0)),
     });
   }
 
-  return [...soltos, ...agrupados].sort((a, b) => b.score.total - a.score.total);
+  return [...soltos, ...agrupados].sort((a, b) => b.score.total - a.score.total || a.item.id.localeCompare(b.item.id));
 }
 
 /**
@@ -156,9 +175,11 @@ export function agrupar(pontuados: { item: Item; score: Score }[]): Agrupado[] {
  * invisíveis. Quem abre precisa ver a variedade do dia, não o ranking de
  * quem postou mais.
  *
- * As excedentes não somem — vão para o Jornal, ordenadas por nota como sempre.
+ * Só o que está abaixo de `minimoNota` cede a vaga: uma terceira notícia
+ * boa da mesma conta continua no lugar que a nota lhe dá — rebaixá-la para
+ * depois de itens de 32 era esconder pauta, não dar variedade.
  */
-export function diversificar(lista: Agrupado[], porFonte = 2): Agrupado[] {
+export function diversificar(lista: Agrupado[], porFonte = 2, minimoNota = 55): Agrupado[] {
   const contagem = new Map<string, number>();
   const escolhidos: Agrupado[] = [];
   const sobra: Agrupado[] = [];
@@ -166,7 +187,7 @@ export function diversificar(lista: Agrupado[], porFonte = 2): Agrupado[] {
   for (const a of lista) {
     const chave = resolverConta(a.item)?.id ?? a.item.fonte;
     const n = contagem.get(chave) ?? 0;
-    if (n < porFonte) {
+    if (n < porFonte || a.score.total >= minimoNota) {
       contagem.set(chave, n + 1);
       escolhidos.push(a);
     } else {

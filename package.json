@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/core/*.test.ts",
     "coleta": "tsx --env-file-if-exists=.env.local scripts/coleta.ts",
     "coleta:dry": "tsx --env-file-if-exists=.env.local scripts/coleta.ts --dry",
     "handles": "tsx --env-file-if-exists=.env.local scripts/verificar-handles.ts",
