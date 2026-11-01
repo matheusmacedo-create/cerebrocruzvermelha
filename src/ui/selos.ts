@@ -24,7 +24,7 @@ export function corDoVeredito(v: Veredito): string {
 /** Direito autorizado é o único verde: é o único que pode ser publicado. */
 export function corDoDireito(d: Direito): string {
   if (d === "autorizado") return "verde";
-  if (d === "oficial" || d === "movimento") return "ambar";
+  if (d === "casa" || d === "oficial" || d === "movimento") return "ambar";
   return "vermelho";
 }
 

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import type { Eixo, Score } from "@/core/tipos";
 import { EIXOS } from "@/core/tipos";
 import { carregarAcervo, pontuar } from "@/dados/acervo";
 import { CONTAS, SOMENTE_INTERNO, resolverConta } from "@/core/contas";
 import { agrupar } from "@/core/agrupar";
 import { MODO_ROTULO, ehSinal } from "@/core/mente";
-import { lerRecusas } from "@/dados/feedback";
+import { lerAceites, lerRecusas } from "@/dados/feedback";
 import { lerContextoDaRedacao } from "@/dados/redacao";
+import { autorizadoNoContrato } from "../_lib/autorizacao";
 
 export const dynamic = "force-dynamic";
 
@@ -58,14 +58,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const origem = `${url.protocol}//${url.host}`;
 
-  const segredo = process.env.PAUTA_TOKEN;
-  if (segredo && req.headers.get("authorization") !== `Bearer ${segredo}`) {
+  if (!autorizadoNoContrato(req)) {
     return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
   }
 
-  const [acervo, recusados, daRedacao] = await Promise.all([
+  const [acervo, recusados, aceites, daRedacao] = await Promise.all([
     carregarAcervo(),
     lerRecusas(),
+    lerAceites(),
     lerContextoDaRedacao(),
   ]);
 
@@ -114,12 +114,12 @@ export async function GET(req: Request) {
   const sinais = agrupar(
     pontuar(
       acervo.itens.filter((i) => ehSinal(i)),
-      { hoje: acervo.hoje, recusados, ...daRedacao },
+      { hoje: acervo.hoje, recusados, aceites, ...daRedacao },
     ),
   );
 
   for (const { item, score, semelhantes, recolhidos } of sinais) {
-    const s = score as Score & { eixo?: Eixo };
+    const s = score;
     const idSinal = `sinal:${item.id}`;
     no({
       id: idSinal,

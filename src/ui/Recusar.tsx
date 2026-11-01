@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MOTIVOS, type MotivoRecusa } from "@/core/tipos";
+import { recusarSinal } from "@/app/acoes";
 
 /**
  * Recusar uma sugestão.
@@ -23,14 +24,11 @@ export function Recusar({ id, titulo }: { id: string; titulo: string }) {
   async function recusar(motivo: MotivoRecusa) {
     setErro(null);
     try {
-      const r = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, motivo }),
-      });
-      if (!r.ok) {
-        const d = (await r.json().catch(() => ({}))) as { erro?: string };
-        setErro(d.erro ?? "Não deu para registrar. Tente de novo.");
+      // Server Action, e não fetch em /api/feedback: a API tem porta
+      // (PAUTA_TOKEN) e a tela não carrega segredo.
+      const r = await recusarSinal(id, motivo);
+      if (r.erro) {
+        setErro(r.erro);
         return;
       }
       setAberto(false);

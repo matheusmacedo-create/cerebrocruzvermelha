@@ -5,6 +5,7 @@ import { inputInstagram, type Cadencia } from "@/apify/input";
 import { coletarDocumentais } from "@/dados/documentais";
 import { montarAcervo } from "@/dados/montar";
 import type { Acervo } from "@/core/tipos";
+import { autorizadoNaOperacao } from "../_lib/autorizacao";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -62,8 +63,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, cadencia, nota: "nenhuma conta nesta cadência" });
   }
 
+  // Os webhooks fixos da Apify estão presos às Tasks agendadas; uma run
+  // avulsa do actor não dispara nenhum deles. Sem avisar o nosso webhook a
+  // run terminava, cobrava, e o resultado nunca entrava no acervo.
+  const segredoDoWebhook = process.env.APIFY_WEBHOOK_SECRET?.trim();
+  const avisarEm = segredoDoWebhook
+    ? `${url.protocol}//${url.host}/api/webhook/apify?segredo=${encodeURIComponent(segredoDoWebhook)}`
+    : undefined;
+
   try {
-    const run = await rodarActor(ACTOR_INSTAGRAM, input);
+    const run = await rodarActor(ACTOR_INSTAGRAM, input, avisarEm);
     return NextResponse.json({
       ok: true,
       cadencia,
@@ -71,18 +80,13 @@ export async function GET(req: Request) {
       desde: input.onlyPostsNewerThan,
       runId: run.id,
       datasetId: run.defaultDatasetId,
+      ingestao: avisarEm
+        ? "o webhook desta run grava o acervo quando ela terminar"
+        : "SEM webhook: configure APIFY_WEBHOOK_SECRET ou o resultado não entra no acervo",
     });
   } catch (e) {
     return NextResponse.json({ erro: String(e) }, { status: 502 });
   }
 }
 
-function autorizado(req: Request): boolean {
-  const segredo = process.env.CRON_SECRET;
-  // Sem segredo configurado a rota fica aberta apenas fora de produção:
-  // um endpoint que gasta crédito da Apify não pode ficar público por
-  // esquecimento de configuração.
-  if (!segredo) return process.env.NODE_ENV !== "production";
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${segredo}`;
-}
+const autorizado = autorizadoNaOperacao;

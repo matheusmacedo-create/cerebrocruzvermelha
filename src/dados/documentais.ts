@@ -156,7 +156,11 @@ async function domRio(): Promise<{ itens: Item[]; detalhe?: string }> {
 async function ifrcGo(): Promise<{ itens: Item[] }> {
   const d = await lerJSON<{
     results?: { id: number; name: string; summary?: string; disaster_start_date?: string; created_at?: string }[];
-  }>("https://goadmin.ifrc.org/api/v2/event/?countries__iso3=BRA&limit=8&ordering=-disaster_start_date");
+    // `countries__iso3=BRA` é ignorado em silêncio pela API do GO — a
+    // resposta vinha com 6 mil emergências do mundo inteiro, e uma enchente
+    // nas Filipinas entrava como apelo do Brasil. O filtro que a API honra é
+    // o id numérico do país (35 = Brasil).
+  }>("https://goadmin.ifrc.org/api/v2/event/?countries__in=35&limit=8&ordering=-disaster_start_date");
   const itens = (d.results ?? []).map(
     (e): Item => ({
       id: hash(`ifrc-go:${e.id}`),

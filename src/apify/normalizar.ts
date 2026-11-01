@@ -45,9 +45,10 @@ function formatoDe(p: PostInstagram): MidiaItem["formato"] {
 function direitoDaConta(vinculo: string | undefined): Direito {
   switch (vinculo) {
     // Ser da Casa não implica autorização de imagem: isso é um ato humano,
-    // registrado na Redação. O Cérebro nunca presume.
+    // registrado na Redação. O Cérebro nunca presume — mas também não chama
+    // a foto da filial de "contexto de terceiro".
     case "casa":
-      return "contexto";
+      return "casa";
     case "movimento":
       return "movimento";
     case "oficial":

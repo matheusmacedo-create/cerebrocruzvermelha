@@ -1,5 +1,6 @@
 import type { Acervo, Item, Relevancia } from "@/core/tipos";
 import { decidir, type ContextoDecisao } from "@/core/mente";
+import { comDiasDeHoje } from "@/core/calendario";
 import { CHAVE_ACERVO, KV_STORE, lerKV, temToken } from "@/apify/cliente";
 import semente from "./seed/acervo-2026-08-30.json";
 
@@ -46,14 +47,20 @@ export async function carregarAcervo(fresco = false): Promise<Acervo> {
   if (temToken() && KV_STORE) {
     try {
       const kv = await lerKV<Omit<Acervo, "origem">>(KV_STORE, CHAVE_ACERVO, fresco);
-      if (kv?.itens?.length) return { ...kv, origem: "apify" };
+      // "Hoje" é hoje, não o dia da coleta: sem isto o calendário mostrava
+      // "em 2 dias" para o que já tinha passado sempre que o webhook parava.
+      if (kv?.itens?.length) {
+        const vivo: Acervo = { ...kv, origem: "apify" };
+        return comDiasDeHoje(vivo);
+      }
     } catch (e) {
       // Uma falha da Apify nunca derruba a tela. Ela cai para a semente
       // e a origem no cabeçalho conta a verdade para quem está olhando.
       console.error("[acervo] falha ao ler o snapshot da Apify:", e);
     }
   }
-  return { ...SEMENTE, origem: "seed" };
+  const semente: Acervo = { ...SEMENTE, origem: "seed" };
+  return comDiasDeHoje(semente);
 }
 
 /** Aplica o motor de decisão sobre os itens e devolve os ordenados por nota. */
